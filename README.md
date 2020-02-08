@@ -1,11 +1,6 @@
 # EB Project Editor
 *GUI CoilSnake Project Editor*
 
-
-  - [Summary](#summary)
-  - [Installation](#installation)
-  - [Troubleshooting](#troubleshooting)
-
 ## Summary
 
 EB Project Editor is a graphical Java application used to edit projects created with [CoilSnake](https://pk-hack.github.io/CoilSnake/), the most powerful mod making tool for the game EarthBound. It is distributed as part of CoilSnake, but it can also be used independently.
