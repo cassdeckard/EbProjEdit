@@ -1,6 +1,7 @@
 *.class
 .vagrant
 .vscode/
+CoilSnakeProject/
 EbProjEditor/buildjar.bat
 EbProjEditor/EbProjEdit.jar
 EbProjEditor/manifest-addition.txt
