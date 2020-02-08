@@ -1,19 +1,13 @@
 package ebhack;
 
-import java.awt.BorderLayout;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 
-import javax.swing.BoxLayout;
-import javax.swing.JButton;
-import javax.swing.JFileChooser;
-import javax.swing.JPanel;
-import javax.swing.JTextArea;
-import javax.swing.JTextField;
-
 public class ProjectEditor extends ToolModule implements ActionListener {
-	private JTextField title, author;
+	private JTextField title, author, projectDir;
 	private JTextArea description;
 	private Project proj;
 	
@@ -45,7 +39,10 @@ public class ProjectEditor extends ToolModule implements ActionListener {
         
 		JPanel panel = new JPanel();
 		panel.setLayout(new BoxLayout(panel, BoxLayout.Y_AXIS));
-		
+
+        projectDir = new JTextField(30);
+        projectDir.setEnabled(false);
+        panel.add(ToolModule.getLabeledComponent("Location: ", projectDir, "Project Directory"));
 		title = new JTextField(30);
 		panel.add(ToolModule.getLabeledComponent("Title: ", title, "Project Title"));
 		author = new JTextField(30);
@@ -64,7 +61,8 @@ public class ProjectEditor extends ToolModule implements ActionListener {
 	
 	public void show() {
 		super.show();
-		
+
+        projectDir.setText(this.proj.getDirectory());
 		title.setText(titleS);
 		author.setText(authorS);
 		description.setText(descriptionS);
@@ -74,7 +72,7 @@ public class ProjectEditor extends ToolModule implements ActionListener {
 
 	public void load(Project proj) {
 		this.proj = proj;
-		
+
 		titleS = proj.getName();
 		authorS = proj.getAuthor();
 		descriptionS = proj.getDescription();

@@ -4,16 +4,19 @@ import java.awt.BorderLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
-import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JComboBox;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 
 import ebhack.MapEditor.MapData;
 
-public class DoorEditor extends ToolModule implements ActionListener {
+public class DoorEditor extends ToolModule implements ActionListener,
+		DocumentListener {
 
 	public DoorEditor(YMLPreferences prefs) {
 		super(prefs);
@@ -31,7 +34,7 @@ public class DoorEditor extends ToolModule implements ActionListener {
 	public String getCredits() {
 		return "Written by Mr. Tenda";
 	}
-	
+
 	private int indexOf(Object[] arr, Object target) {
 		int i = 0;
 		for (Object e : arr) {
@@ -41,32 +44,31 @@ public class DoorEditor extends ToolModule implements ActionListener {
 		}
 		return -1;
 	}
-	
-	private final String[] climbDirections = {
-			"nw", "ne", "sw", "se", "nowhere"
-	};
-	private final String[] typeNames = {
-			"switch", "rope", "ladder", "door", "escalator",
-			"stairway", "object", "person"
-	};
-	
+
+	private final String[] climbDirections = { "nw", "ne", "sw", "se",
+			"nowhere" };
+	private final String[] typeNames = { "switch", "rope", "ladder", "door",
+			"escalator", "stairway", "object", "person" };
+
 	private JComboBox typeBox, dirClimbBox, dirBox;
 	private JTextField destX, destY, style, flagField, textPtr;
 	private JButton seekButton, gotoButton;
+	private JLabel destXhint, destYhint;
 	private MapEditor.MapData.Door door;
 
 	public void init() {
 		mainWindow = createBaseWindow(this);
 		mainWindow.setTitle(this.getDescription());
-		
+
 		JPanel doorInfo = new JPanel();
 		doorInfo.setLayout(new BoxLayout(doorInfo, BoxLayout.Y_AXIS));
-		
+
 		typeBox = new JComboBox(typeNames);
 		typeBox.addActionListener(this);
 		doorInfo.add(ToolModule.getLabeledComponent("Type:", typeBox));
 		dirClimbBox = new JComboBox(climbDirections);
-		doorInfo.add(ToolModule.getLabeledComponent("Stair/Escalator Direction:", dirClimbBox));
+		doorInfo.add(ToolModule.getLabeledComponent(
+				"Stair/Escalator Direction:", dirClimbBox));
 		flagField = ToolModule.createSizedJTextField(4, false);
 		doorInfo.add(ToolModule.getLabeledComponent("Event Flag:", flagField));
 		textPtr = ToolModule.createSizedJTextField(25, false);
@@ -74,7 +76,11 @@ public class DoorEditor extends ToolModule implements ActionListener {
 		dirBox = new JComboBox(new String[] { "Down", "Up", "Right", "Left" });
 		doorInfo.add(ToolModule.getLabeledComponent("Door Direction:", dirBox));
 		destX = ToolModule.createSizedJTextField(4, true);
+		destX.getDocument().addDocumentListener(this);
+		destXhint = new JLabel("%4 = 0");
 		destY = ToolModule.createSizedJTextField(4, true);
+		destY.getDocument().addDocumentListener(this);
+		destYhint = new JLabel("%4 = 0");
 		gotoButton = new JButton("Go");
 		gotoButton.setActionCommand("goto");
 		gotoButton.addActionListener(this);
@@ -82,23 +88,24 @@ public class DoorEditor extends ToolModule implements ActionListener {
 		seekButton.setActionCommand("seek");
 		seekButton.addActionListener(this);
 		doorInfo.add(ToolModule.pairComponents(ToolModule.pairComponents(
-				ToolModule.getLabeledComponent("Destination X:", destX),
-				ToolModule.getLabeledComponent("Destination Y:", destY),
-				true, true),
-				ToolModule.pairComponents(gotoButton, seekButton, true, true),
-				true, true));
+				ToolModule.getLabeledComponent("Destination X:",
+						ToolModule.pairComponents(destX, destXhint, false)),
+				ToolModule.getLabeledComponent("Destination Y:",
+						ToolModule.pairComponents(destY, destYhint, false)),
+				true, true), ToolModule.pairComponents(gotoButton, seekButton,
+				true, true), true, true));
 		style = ToolModule.createSizedJTextField(4, true);
 		doorInfo.add(ToolModule.getLabeledComponent("Warp Style:", style));
-		
+
 		mainWindow.getContentPane().add(doorInfo, BorderLayout.CENTER);
-        mainWindow.invalidate();
-        mainWindow.pack();
-        //mainWindow.setSize(300, 400);
-        mainWindow.setLocationByPlatform(true);
-        mainWindow.validate();
-        mainWindow.setResizable(false);
+		mainWindow.invalidate();
+		mainWindow.pack();
+		// mainWindow.setSize(300, 400);
+		mainWindow.setLocationByPlatform(true);
+		mainWindow.validate();
+		mainWindow.setResizable(false);
 	}
-	
+
 	public void show() {
 		super.show();
 		if (door == null) {
@@ -108,7 +115,7 @@ public class DoorEditor extends ToolModule implements ActionListener {
 			updateGUI();
 		mainWindow.setVisible(true);
 	}
-	
+
 	public void show(Object o) {
 		super.show();
 		this.door = (MapData.Door) o;
@@ -116,7 +123,7 @@ public class DoorEditor extends ToolModule implements ActionListener {
 		typeBox.setSelectedIndex(indexOf(typeNames, door.type));
 		mainWindow.setVisible(true);
 	}
-	
+
 	private void updateGUI() {
 		// Clear all fields
 		dirClimbBox.setSelectedIndex(-1);
@@ -223,7 +230,7 @@ public class DoorEditor extends ToolModule implements ActionListener {
 		if (mainWindow != null)
 			mainWindow.setVisible(false);
 	}
-	
+
 	public void seek(int x, int y) {
 		destX.setText(Integer.toString(x));
 		destY.setText(Integer.toString(y));
@@ -250,12 +257,30 @@ public class DoorEditor extends ToolModule implements ActionListener {
 			seekButton.setEnabled(false);
 			ebhack.Ebhack.main.showModule(MapEditor.class, this);
 		} else if (ae.getActionCommand().equals("goto")) {
-			ebhack.Ebhack.main.showModule(MapEditor.class,
-					new int[] { Integer.parseInt(destX.getText())*8,
-								Integer.parseInt(destY.getText())*8 });
+			ebhack.Ebhack.main.showModule(
+					MapEditor.class,
+					new int[] { Integer.parseInt(destX.getText()) * 8,
+							Integer.parseInt(destY.getText()) * 8 });
 		} else if (ae.getSource().equals(typeBox)) {
 			updateGUI();
 		}
 	}
-	
+
+	public void insertUpdate(DocumentEvent e) {
+		changedUpdate(e);
+	}
+
+	public void removeUpdate(DocumentEvent e) {
+		changedUpdate(e);
+	}
+
+	public void changedUpdate(DocumentEvent e) {
+		if ((destX.getText().length() > 0) && (destY.getText().length() > 0)) {
+			destXhint
+					.setText("%4 = " + (Integer.parseInt(destX.getText()) % 4));
+			destYhint
+					.setText("%4 = " + (Integer.parseInt(destY.getText()) % 4));
+		}
+	}
+
 }

@@ -1,86 +1,42 @@
 package ebhack;
 
-import java.awt.AlphaComposite;
-import java.awt.BorderLayout;
-import java.awt.Color;
-import java.awt.Cursor;
-import java.awt.Dimension;
-import java.awt.FlowLayout;
-import java.awt.Font;
-import java.awt.Graphics;
-import java.awt.Graphics2D;
-import java.awt.Image;
-import java.awt.Point;
-import java.awt.Toolkit;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.AdjustmentEvent;
-import java.awt.event.AdjustmentListener;
-import java.awt.event.ComponentEvent;
-import java.awt.event.ComponentListener;
-import java.awt.event.MouseEvent;
-import java.awt.event.MouseListener;
-import java.awt.event.MouseMotionListener;
-import java.awt.event.MouseWheelEvent;
-import java.awt.event.MouseWheelListener;
-import java.awt.geom.Line2D;
-import java.awt.geom.Rectangle2D;
-import java.awt.image.BufferedImage;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Stack;
-
-import javax.imageio.ImageIO;
-import javax.swing.AbstractButton;
-import javax.swing.ButtonGroup;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JComboBox;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JRadioButtonMenuItem;
-import javax.swing.JScrollBar;
-import javax.swing.JSeparator;
-import javax.swing.JTextField;
-import javax.swing.KeyStroke;
-import javax.swing.event.DocumentEvent;
-import javax.swing.event.DocumentListener;
-
+import ebhack.MapEditor.MapData.Sector;
 import org.yaml.snakeyaml.DumperOptions;
 import org.yaml.snakeyaml.DumperOptions.FlowStyle;
 import org.yaml.snakeyaml.Yaml;
 
-import ebhack.MapEditor.MapData.Sector;
+import javax.imageio.ImageIO;
+import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
+import javax.swing.filechooser.FileFilter;
+import java.awt.*;
+import java.awt.event.*;
+import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
+import java.io.*;
+import java.util.*;
+import java.util.List;
 
 public class MapEditor extends ToolModule implements ActionListener,
 		DocumentListener, AdjustmentListener, MouseWheelListener,
 		ComponentListener {
-	private JTextField xField, yField;
-	private JComboBox tilesetChooser, palChooser, musicChooser;
+	private JTextField xField, yField, itemField, townMapXField, townMapYField;
+	private JComboBox tilesetChooser, palChooser, musicChooser, townMapChooser,
+			settingChooser, townMapImageChooser, townMapArrowChooser;
+	private JCheckBox teleportCheckbox;
 	private JScrollBar xScroll, yScroll;
+	private JPanel coordsPanel, sectorPanel, sectorPanel2;
+	private JLabel pixelCoordLabel, warpCoordLabel, tileCoordLabel;
 	private JMenu modeMenu;
-	private JMenuItem /* sectorProps, *//* findSprite, */copySector, pasteSector,
-			undo, redo;
+	private JMenuItem /* findSprite, */copySector, pasteSector, copySector2,
+			pasteSector2, undo, redo;
 
 	public static MapData map;
 	private MapDisplay mapDisplay;
 	private TileSelector tileSelector;
-	private JLabel statusLabel;
 
-	private MapData.Sector copiedSector;
+	private MapData.Sector copiedSector, copiedSector2;
 	private int[][] copiedSectorTiles = new int[4][8];
 
 	public MapEditor(YMLPreferences prefs) {
@@ -111,14 +67,6 @@ public class MapEditor extends ToolModule implements ActionListener,
 		JCheckBoxMenuItem checkBox;
 		JRadioButtonMenuItem radioButton;
 		JMenu menu;
-		
-		/*
-		 * menu = new JMenu("File");
-		 * menu.add(ToolModule.createJMenuItem("Apply Changes", 's',
-		 * "control S", "apply", this));
-		 * menu.add(ToolModule.createJMenuItem("Exit", 'x', "alt F4", "close",
-		 * this)); menuBar.add(menu);
-		 */
 
 		menu = new JMenu("Edit");
 		undo = ToolModule.createJMenuItem("Undo Tile Change", 'u', "control Z",
@@ -136,9 +84,12 @@ public class MapEditor extends ToolModule implements ActionListener,
 		pasteSector = ToolModule.createJMenuItem("Paste Sector", 'p',
 				"control V", "pasteSector", this);
 		menu.add(pasteSector);
-		// sectorProps = ToolModule.createJMenuItem("Edit Sector's Properties",
-		// 'r', null, "sectorEdit", this);
-		// menu.add(sectorProps);
+		copySector2 = ToolModule.createJMenuItem("Copy Sector Attributes", ' ',
+				"control shift C", "copySector2", this);
+		menu.add(copySector2);
+		pasteSector2 = ToolModule.createJMenuItem("Paste Sector Attributes",
+				' ', "control shift V", "pasteSector2", this);
+		menu.add(pasteSector2);
 		menu.add(new JSeparator());
 		menu.add(ToolModule.createJMenuItem("Clear Map", 'm', null,
 				"delAllMap", this));
@@ -153,13 +104,6 @@ public class MapEditor extends ToolModule implements ActionListener,
 		menu.add(new JSeparator());
 		menu.add(ToolModule.createJMenuItem("Clear Tile Image Cache", 't',
 				"control R", "resetTileImages", this));
-		menu.add(new JSeparator());
-		menu.add(ToolModule.createJMenuItem("Highlight Multiple Tiles", 'h', "control H",
-				"highlightMultipleTilesExternal", this));
-		menu.add(ToolModule.createJMenuItem("Select Area", 'a', "A",
-				"selectAreaExternal", this));
-		menu.add(ToolModule.createJMenuItem("Select Snakey Area", 's', "S",
-				"selectSnakeyAreaExternal", this));
 		menuBar.add(menu);
 
 		modeMenu = new JMenu("Mode");
@@ -217,33 +161,35 @@ public class MapEditor extends ToolModule implements ActionListener,
 
 		menu = new JMenu("Options");
 		checkBox = new JCheckBoxMenuItem("Show Grid");
-        checkBox.setAccelerator( KeyStroke.getKeyStroke( "control G" ) );
 		checkBox.setMnemonic('g');
 		checkBox.setSelected(true);
 		checkBox.setActionCommand("grid");
-		checkBox.addActionListener(this);
-		menu.add(checkBox);
-		checkBox = new JCheckBoxMenuItem("Enable Highlighting");
-        checkBox.setAccelerator( KeyStroke.getKeyStroke( "control F" ) );
-		checkBox.setMnemonic('h');
-		checkBox.setSelected(false);
-		checkBox.setActionCommand("toggleHighlighting");
+		checkBox.setAccelerator(KeyStroke.getKeyStroke("control G"));
 		checkBox.addActionListener(this);
 		menu.add(checkBox);
 		checkBox = new JCheckBoxMenuItem("Show Tile Numbers");
-        checkBox.setAccelerator( KeyStroke.getKeyStroke( "control T" ) );
 		checkBox.setMnemonic('t');
 		checkBox.setSelected(false);
 		checkBox.setActionCommand("tileNums");
 		checkBox.addActionListener(this);
 		menu.add(checkBox);
-		checkBox = new JCheckBoxMenuItem("Enable Tile Dragging");
-        checkBox.setAccelerator( KeyStroke.getKeyStroke( "control D" ) );
-		checkBox.setMnemonic('d');
-		checkBox.setSelected(true);
-		checkBox.setActionCommand("enableTileDragging");
+		menu.add(new JSeparator());
+		checkBox = new PrefsCheckBox("Show Sector Attributes", prefs,
+				"showSectorAttrs", false, 'c');
+		checkBox.setActionCommand("showSectorAttrs");
 		checkBox.addActionListener(this);
 		menu.add(checkBox);
+		checkBox = new PrefsCheckBox("Show Sector Town Map Settings", prefs,
+				"showSectorAttrs2", false, 'c');
+		checkBox.setActionCommand("showSectorAttrs2");
+		checkBox.addActionListener(this);
+		menu.add(checkBox);
+		checkBox = new PrefsCheckBox("Show Coordinates", prefs, "showCoords",
+				false, 'c');
+		checkBox.setActionCommand("showCoords");
+		checkBox.addActionListener(this);
+		menu.add(checkBox);
+		menu.add(new JSeparator());
 		checkBox = new JCheckBoxMenuItem("Show NPC IDs");
 		checkBox.setMnemonic('n');
 		checkBox.setSelected(true);
@@ -256,8 +202,8 @@ public class MapEditor extends ToolModule implements ActionListener,
 		checkBox.setActionCommand("spriteboxes");
 		checkBox.addActionListener(this);
 		menu.add(checkBox);
+		menu.add(new JSeparator());
 		checkBox = new JCheckBoxMenuItem("Show Map Changes");
-        checkBox.setAccelerator( KeyStroke.getKeyStroke( "control Q" ) );
 		checkBox.setMnemonic('c');
 		checkBox.setSelected(false);
 		checkBox.setActionCommand("mapchanges");
@@ -267,9 +213,17 @@ public class MapEditor extends ToolModule implements ActionListener,
 				"maskOverscan", false, 'o'));
 		menuBar.add(menu);
 
+        menu = new JMenu("Tools");
+        menu.add(ToolModule.createJMenuItem("Export as Image", 'i', "control i",
+                "exportAsImage", this));
+        menuBar.add(menu);
+
 		mainWindow.setJMenuBar(menuBar);
 
 		JPanel contentPanel = new JPanel(new BorderLayout());
+
+		JPanel topPanel = new JPanel();
+		topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
 
 		JPanel panel = new JPanel(new FlowLayout());
 		panel.add(new JLabel("X: "));
@@ -297,24 +251,85 @@ public class MapEditor extends ToolModule implements ActionListener,
 		panel.add(musicChooser);
 		loadMusicNames();
 
-		panel.add( new JLabel( "Status: " ) );
-		statusLabel = new JLabel( "OK" );
-		panel.add( statusLabel );	
-		
-		contentPanel.add(panel, BorderLayout.NORTH);
+		topPanel.add(panel);
 
-//		JPanel statusPanel = new JPanel( new FlowLayout() );
-//		statusPanel.add( new JLabel( "Status: " ) );
-//		statusLabel = new JLabel( "OK" );
-//		statusPanel.add( statusLabel );	
-//		statusPanel.add( ToolModule.createSizedJTextField(Integer.toString(MapData.WIDTH_IN_TILES).length(), true) );
-//		mainWindow.getContentPane().add( statusPanel, BorderLayout.SOUTH );
+		// Misc. sector attributes
+		sectorPanel = new JPanel(new FlowLayout());
+		sectorPanel.add(new JLabel("Item: "));
+		itemField = ToolModule.createSizedJTextField(3, true);
+		itemField.getDocument().addDocumentListener(this);
+		sectorPanel.add(itemField);
+		sectorPanel.add(new JLabel("Town Map: "));
+		townMapChooser = new JComboBox();
+		for (int i = 0; i < MapData.Sector.TOWN_MAP_NAMES.length; ++i) {
+			townMapChooser
+					.addItem(getNumberedString(ToolModule
+							.capitalize(MapData.Sector.TOWN_MAP_NAMES[i]), i));
+		}
+		townMapChooser.addActionListener(this);
+		sectorPanel.add(townMapChooser);
+		sectorPanel.add(new JLabel("Setting: "));
+		// settingChooser = ToolModule
+		// .createJComboBoxFromArray(MapData.Sector.SETTING_NAMES);
+		settingChooser = new JComboBox();
+		for (int i = 0; i < MapData.Sector.SETTING_NAMES.length; ++i)
+			settingChooser.addItem(getNumberedString(
+					ToolModule.capitalize(MapData.Sector.SETTING_NAMES[i]), i));
+		settingChooser.addActionListener(this);
+		sectorPanel.add(settingChooser);
+		sectorPanel.add(new JLabel("Teleport Enabled: "));
+		teleportCheckbox = new JCheckBox();
+		teleportCheckbox.addActionListener(this);
+		sectorPanel.add(teleportCheckbox);
+		sectorPanel.setVisible(prefs.getValueAsBoolean("showSectorAttrs"));
+		topPanel.add(sectorPanel);
+
+		sectorPanel2 = new JPanel(new FlowLayout());
+		sectorPanel2.add(new JLabel("Town Map Image: "));
+		townMapImageChooser = new JComboBox();
+		for (int i = 0; i < MapData.Sector.TOWN_MAP_IMAGES.length; ++i) {
+			townMapImageChooser
+					.addItem(getNumberedString(ToolModule
+							.capitalize(MapData.Sector.TOWN_MAP_IMAGES[i]), i));
+		}
+		townMapImageChooser.addActionListener(this);
+		sectorPanel2.add(townMapImageChooser);
+		sectorPanel2.add(new JLabel("X: "));
+		townMapXField = ToolModule.createSizedJTextField(3, true);
+		townMapXField.getDocument().addDocumentListener(this);
+		sectorPanel2.add(townMapXField);
+		sectorPanel2.add(new JLabel("Y: "));
+		townMapYField = ToolModule.createSizedJTextField(3, true);
+		townMapYField.getDocument().addDocumentListener(this);
+		sectorPanel2.add(townMapYField);
+		sectorPanel2.add(new JLabel("Arrow: "));
+		townMapArrowChooser = new JComboBox();
+		for (int i = 0; i < MapData.Sector.TOWN_MAP_ARROWS.length; ++i) {
+			townMapArrowChooser
+					.addItem(getNumberedString(ToolModule
+							.capitalize(MapData.Sector.TOWN_MAP_ARROWS[i]), i));
+		}
+		townMapArrowChooser.addActionListener(this);
+		sectorPanel2.add(townMapArrowChooser);
+		sectorPanel2.setVisible(prefs.getValueAsBoolean("showSectorAttrs2"));
+		topPanel.add(sectorPanel2);
+
+		contentPanel.add(topPanel, BorderLayout.NORTH);
 
 		tilesetChooser.setEnabled(false);
 		musicChooser.setEnabled(false);
+		itemField.setEnabled(false);
+		townMapChooser.setEnabled(false);
+		settingChooser.setEnabled(false);
+		teleportCheckbox.setEnabled(false);
 
-		mapDisplay = new MapDisplay(map, copySector, pasteSector, undo, redo,
-				prefs, this);
+		pixelCoordLabel = new JLabel("Pixel X,Y: (-,-)");
+		warpCoordLabel = new JLabel("Warp X,Y: (-,-)");
+		tileCoordLabel = new JLabel("Tiled X,Y: (-,-)");
+
+		mapDisplay = new MapDisplay(map, copySector, pasteSector, copySector2,
+				pasteSector2, undo, redo, pixelCoordLabel, warpCoordLabel,
+				tileCoordLabel, prefs);
 		mapDisplay.addMouseWheelListener(this);
 		mapDisplay.addActionListener(this);
 		mapDisplay.init();
@@ -330,20 +345,28 @@ public class MapEditor extends ToolModule implements ActionListener,
 		contentPanel.add(yScroll, BorderLayout.EAST);
 
 		mainWindow.getContentPane().add(contentPanel, BorderLayout.CENTER);
-		
-		tileSelector = new TileSelector( 24, 4, mapDisplay );
+
+		coordsPanel = new JPanel(new FlowLayout(FlowLayout.LEFT));
+		coordsPanel.add(pixelCoordLabel);
+		coordsPanel.add(new JSeparator());
+		coordsPanel.add(warpCoordLabel);
+		coordsPanel.add(new JSeparator());
+		coordsPanel.add(tileCoordLabel);
+		coordsPanel.setVisible(prefs.getValueAsBoolean("showCoords"));
+		topPanel.add(coordsPanel);
+
+		tileSelector = new TileSelector(24, 4);
 		mapDisplay.setTileSelector(tileSelector);
 		mainWindow.getContentPane().add(
-				ToolModule.pairComponents(tileSelector,
-						tileSelector.getScrollBar(), false),
-				BorderLayout.PAGE_END);
+				ToolModule.pairComponents(
+						ToolModule.pairComponents(tileSelector,
+								tileSelector.getScrollBar(), false),
+						coordsPanel, false), BorderLayout.PAGE_END);
 
 		mainWindow.invalidate();
 		mainWindow.pack();
-		// mainWindow.setSize(300, 400);
 		mainWindow.setLocationByPlatform(true);
 		mainWindow.validate();
-		// mainWindow.setResizable(false);
 		mainWindow.setResizable(true);
 	}
 
@@ -362,7 +385,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 	public void loadMusicNames() {
 		musicChooser.removeActionListener(this);
 		musicChooser.removeAllItems();
-		for (int i = 0; i < 164; i++)
+		for (int i = 0; i < 165; i++)
 			musicChooser.addItem(getNumberedString("", i, false));
 		musicChooser.addActionListener(this);
 	}
@@ -398,113 +421,42 @@ public class MapEditor extends ToolModule implements ActionListener,
 			ActionListener, MouseListener, MouseMotionListener {
 		private YMLPreferences prefs;
 		private MapData map;
-		private JMenuItem copySector, pasteSector, undoButton, redoButton;
-		private MapEditor mapEditor;
+		private JMenuItem copySector, pasteSector, copySector2, pasteSector2,
+				undoButton, redoButton;
 
 		private final ActionEvent sectorEvent = new ActionEvent(this,
 				ActionEvent.ACTION_PERFORMED, "sectorChanged");
 
 		private static Image[][][] tileImageCache;
-		
-		private interface UndoableAction {
-			public void redo( MapData map );
-			public void undo( MapData map );
-		}
-		
-		private class UndoableTileChange implements UndoableAction {
+
+		private class UndoableTileChange {
 			public int x, y, oldTile, newTile;
 
-			public UndoableTileChange( int x, int y, int oldTile, int newTile ) {
+			public UndoableTileChange(int x, int y, int oldTile, int newTile) {
 				this.x = x;
 				this.y = y;
 				this.oldTile = oldTile;
 				this.newTile = newTile;
 			}
-			
-			public void redo( MapData map ) {
-				map.setMapTile( x, y, newTile );
-			}
-			
-			public void undo( MapData map ) {
-				map.setMapTile( x, y, oldTile );
-			}
-		}
-		
-		private class UndoablePaste implements UndoableAction {
-			public int x, y;
-			public int[][] oldTiles;
-			public int[][] newTiles;
-			
-			public UndoablePaste( int _x, int _y, int[][] _oldTiles, int[][] _newTiles ) {
-				x = _x;
-				y = _y;
-				oldTiles = _oldTiles;
-				newTiles = _newTiles;
-			}
-			
-			public void undo(MapData map) {
-				for( int i = 0; i < oldTiles.length; i++ ) {
-        			for( int j = 0; j < oldTiles[0].length; j++ ) {
-        				map.setMapTile( x + i, y + j, oldTiles[i][j] );
-        			}
-        		}
-			}
-			
-			public void redo(MapData map) {
-				for( int i = 0; i < newTiles.length; i++ ) {
-        			for( int j = 0; j < newTiles[0].length; j++ ) {
-        				map.setMapTile( x + i, y + j, newTiles[i][j] );
-        			}
-        		}
-			}
-		}
-		
-		private class UndoableSnakeyPaste implements UndoableAction {
-			public int x, y;//x, y of first point
-			public List<Point> snake;//the points for the whole snake, relative to the first point
-			public int[] oldTiles;
-			public int[] newTiles;
-			
-			public UndoableSnakeyPaste( int _x, int _y, List<Point> _snake, int[] _oldTiles, int[] _newTiles ) {
-				x = _x;
-				y = _y;
-				snake = _snake;
-				oldTiles = _oldTiles;
-				newTiles = _newTiles;
-			}
-			
-			public void undo(MapData map) {
-				for( int i = 0; i < snake.size(); i++ ) {
-					Point point = snake.get( i );
-    				map.setMapTile( x + point.x, y + point.y, oldTiles[i] );
-        		}
-			}
-			
-			public void redo(MapData map) {
-				for( int i = 0; i < snake.size(); i++ ) {
-					Point point = snake.get( i );
-    				map.setMapTile( x + point.x, y + point.y, newTiles[i] );
-        		}
-			}
 		}
 
-//		private class UndoableSectorPaste implements UndoableAction {
-//			public int sectorX, sectorY;
-//			private int[][] tiles;
-//			private Sector sector;
-//
-//			public UndoableSectorPaste(int sectorX, int sectorY, int[][] tiles,
-//					Sector sector) {
-//				this.sectorX = sectorX;
-//				this.sectorY = sectorY;
-//				this.tiles = tiles;
-//				this.sector = sector;
-//			}
-//
-//		}
+		private class UndoableSectorPaste {
+			public int sectorX, sectorY;
+			private int[][] tiles;
+			private Sector sector;
 
-		private Stack<UndoableAction> undoStack = new Stack<UndoableAction>();
-		private Stack<UndoableAction> redoStack = new Stack<UndoableAction>();
+			public UndoableSectorPaste(int sectorX, int sectorY, int[][] tiles,
+					Sector sector) {
+				this.sectorX = sectorX;
+				this.sectorY = sectorY;
+				this.tiles = tiles;
+				this.sector = sector;
+			}
+
+		}
+
+		private Stack<Object> undoStack = new Stack<Object>();
+		private Stack<Object> redoStack = new Stack<Object>();
 
 		private int screenWidth = 24;
 		private int screenHeight = 12;
@@ -528,10 +480,11 @@ public class MapEditor extends ToolModule implements ActionListener,
 		// Popup menus
 		private int popupX, popupY;
 		private JPopupMenu spritePopupMenu, doorPopupMenu;
-		private JMenuItem delNPC, cutNPC, copyNPC, switchNPC;
+		private JMenuItem detailsNPC, delNPC, cutNPC, copyNPC, switchNPC, moveNPC;
 		private int copiedNPC = 0;
 		private MapData.SpriteEntry popupSE;
-		private JMenuItem delDoor, cutDoor, copyDoor, editDoor;
+		private JMenuItem detailsDoor, delDoor, cutDoor, copyDoor, editDoor,
+				jumpDoor;
 		private MapData.Door popupDoor, copiedDoor;
 
 		// Seeking stuff
@@ -546,14 +499,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 		// Mode settings
 		private int previousMode = 0;
 		private int togglePreviousMode = -1;
-		private boolean editMap = true, drawTileNums = false, enableHighlighting = false, enableDraggingTiles = true;
-		private int dragTileX = -1, dragTileY = -1;
-		private int selectAreaX1 = -1, selectAreaY1 = -1, selectAreaX2 = -1, selectAreaY2 = -1;
-		private List<Point> selectSnake = null;
-		private String subMode = null;
-		private String dragType = null;
-		private List<Integer> highlightedTiles = null;
-		
+		private boolean editMap = true, drawTileNums = false;
 		private boolean drawSprites = false, editSprites = false,
 				drawSpriteNums = true;
 		private boolean drawDoors = false, editDoors = false, seekDoor = false;
@@ -563,17 +509,21 @@ public class MapEditor extends ToolModule implements ActionListener,
 		private boolean tvPreview = false;
 		private int tvPreviewX, tvPreviewY, tvPreviewW, tvPreviewH;
 
+		// Coordinate labels
+		private JLabel pixelCoordLabel, warpCoordLabel, tileCoordLabel;
+
 		// Cache enemy colors
 		public static Color[] enemyColors = null;
 
 		private TileSelector tileSelector;
 
-		public MapDisplay( MapData map, JMenuItem copySector,
-				JMenuItem pasteSector, JMenuItem undoButton,
-				JMenuItem redoButton, YMLPreferences prefs, MapEditor mapEditor ) {
+		public MapDisplay(MapData map, JMenuItem copySector,
+				JMenuItem pasteSector, JMenuItem copySector2,
+				JMenuItem pasteSector2, JMenuItem undoButton,
+				JMenuItem redoButton, JLabel pixelCoordLabel,
+				JLabel warpCoordLabel, JLabel tileCoordLabel,
+				YMLPreferences prefs) {
 			super();
-			
-			this.mapEditor = mapEditor;
 
 			if (enemyColors == null) {
 				enemyColors = new Color[203];
@@ -587,41 +537,56 @@ public class MapEditor extends ToolModule implements ActionListener,
 			this.map = map;
 			this.copySector = copySector;
 			this.pasteSector = pasteSector;
+			this.copySector2 = copySector2;
+			this.pasteSector2 = pasteSector2;
 			this.undoButton = undoButton;
 			this.redoButton = redoButton;
+			this.pixelCoordLabel = pixelCoordLabel;
+			this.warpCoordLabel = warpCoordLabel;
+			this.tileCoordLabel = tileCoordLabel;
 
 			if (tileImageCache == null)
 				resetTileImageCache();
 
 			// Create Sprite popup menu
 			spritePopupMenu = new JPopupMenu();
+			spritePopupMenu.add(detailsNPC = ToolModule.createJMenuItem(
+					"Sprite @ ", ' ', null, null, this));
+			detailsNPC.setEnabled(false);
 			spritePopupMenu.add(ToolModule.createJMenuItem("New NPC", 'n',
 					null, "newNPC", this));
 			spritePopupMenu.add(delNPC = ToolModule.createJMenuItem(
 					"Delete NPC", 'd', null, "delNPC", this));
 			spritePopupMenu.add(cutNPC = ToolModule.createJMenuItem("Cut NPC",
-					'u', null, "cutNPC", this));
+					'c', null, "cutNPC", this));
 			spritePopupMenu.add(copyNPC = ToolModule.createJMenuItem(
-					"Copy NPC", 'c', null, "copyNPC", this));
+					"Copy NPC", 'y', null, "copyNPC", this));
 			spritePopupMenu.add(ToolModule.createJMenuItem("Paste NPC", 'p',
 					null, "pasteNPC", this));
 			spritePopupMenu.add(switchNPC = ToolModule.createJMenuItem(
-					"Switch NPC", 'p', null, "switchNPC", this));
+					"Switch NPC", 's', null, "switchNPC", this));
+            spritePopupMenu.add(moveNPC = ToolModule.createJMenuItem(
+                    "Move NPC", 'm', null, "moveNPC", this));
 
 			// Create Door popup menu
 			doorPopupMenu = new JPopupMenu();
-			doorPopupMenu.add(ToolModule.createJMenuItem("New door", 'n', null,
+			doorPopupMenu.add(detailsDoor = ToolModule.createJMenuItem(
+					"Door @ ", ' ', null, null, this));
+			detailsDoor.setEnabled(false);
+			doorPopupMenu.add(ToolModule.createJMenuItem("New Door", 'n', null,
 					"newDoor", this));
 			doorPopupMenu.add(delDoor = ToolModule.createJMenuItem(
-					"Delete door", 'd', null, "delDoor", this));
+					"Delete Door", 'd', null, "delDoor", this));
 			doorPopupMenu.add(cutDoor = ToolModule.createJMenuItem("Cut Door",
-					'u', null, "cutDoor", this));
+					'c', null, "cutDoor", this));
 			doorPopupMenu.add(copyDoor = ToolModule.createJMenuItem(
-					"Copy Door", 'c', null, "copyDoor", this));
+					"Copy Door", 'y', null, "copyDoor", this));
 			doorPopupMenu.add(ToolModule.createJMenuItem("Paste Door", 'p',
 					null, "pasteDoor", this));
 			doorPopupMenu.add(editDoor = ToolModule.createJMenuItem(
-					"Edit door", 'e', null, "editDoor", this));
+					"Edit Door", 'e', null, "editDoor", this));
+			doorPopupMenu.add(jumpDoor = ToolModule.createJMenuItem(
+					"Jump to Destination", 'j', null, "jumpDoor", this));
 
 			addMouseListener(this);
 			addMouseMotionListener(this);
@@ -671,96 +636,28 @@ public class MapEditor extends ToolModule implements ActionListener,
 			int pal;
 			for (i = 0; i < screenHeight; i++) {
 				for (j = 0; j < screenWidth; j++) {
-					int mapTile = map.getMapTile( x + j, y + i );
-					sector = map.getSector((j + x) / MapData.SECTOR_WIDTH, (i + y) / MapData.SECTOR_HEIGHT);
-					pal = TileEditor.tilesets[TileEditor.getDrawTilesetNumber(sector.tileset)].getPaletteNum(sector.tileset, sector.palette);
-					
-                    Image tileImage = getTileImage(TileEditor.getDrawTilesetNumber(sector.tileset), mapTile, pal);                    
-                    g.drawImage( tileImage, 
-                        j * MapData.TILE_WIDTH + 1, i * MapData.TILE_HEIGHT + 1,
-                        MapData.TILE_WIDTH,         MapData.TILE_HEIGHT, this );
-                    
+					sector = map.getSector((j + x) / MapData.SECTOR_WIDTH,
+							(i + y) / MapData.SECTOR_HEIGHT);
+					pal = TileEditor.tilesets[TileEditor
+							.getDrawTilesetNumber(sector.tileset)]
+							.getPaletteNum(sector.tileset, sector.palette);
+					g.drawImage(
+							getTileImage(TileEditor
+									.getDrawTilesetNumber(sector.tileset), map
+									.getMapTile(x + j, y + i), pal), j
+									* MapData.TILE_WIDTH + 1, i
+									* MapData.TILE_HEIGHT + 1,
+							MapData.TILE_WIDTH, MapData.TILE_HEIGHT, this);
 					if (drawTileNums && !gamePreview) {
-						drawNumber(g, mapTile, j * MapData.TILE_WIDTH + 1, i * MapData.TILE_HEIGHT + 1, 
-								prefs.getValueAsBoolean( "useHexNumbers" ), false);
+						drawNumber(g, map.getMapTile(x + j, y + i), j
+								* MapData.TILE_WIDTH + 1, i
+								* MapData.TILE_HEIGHT + 1, false, false);
 					}
-					
-                    if( editMap && enableHighlighting && mapTile == tileSelector.getSelectedTile() 
-                    		&& sector.tileset == mapEditor.tilesetChooser.getSelectedIndex() ) {
-						g.setPaint(Color.white);
-						g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6F));
-						g.fillRect(j * MapData.TILE_HEIGHT + 1, i * MapData.TILE_WIDTH + 1, MapData.TILE_WIDTH, MapData.TILE_HEIGHT);
-						g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0F));
-                    } else if( editMap && ( enableHighlighting || ( subMode != null && subMode.equals( "highlightMultipleTiles" ) ) )
-                    		&& highlightedTiles != null && highlightedTiles.contains( mapTile ) 
-                    		&& sector.tileset == mapEditor.tilesetChooser.getSelectedIndex() ) {
-                    	g.setPaint( colorFromInt( highlightedTiles.indexOf( mapTile ) ) );
-						g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6F));
-						g.fillRect(j * MapData.TILE_HEIGHT + 1, i * MapData.TILE_WIDTH + 1, MapData.TILE_WIDTH, MapData.TILE_HEIGHT);
-						g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0F));
-                    }
 				}
 			}
 
-			if (grid && !gamePreview)
+			if (grid && !gamePreview && !drawEnemies)
 				drawGrid(g);
-			
-			//draw selection rectangle
-            if( editMap && subMode != null && subMode.equals( "selectArea" ) ) {
-            	if( selectAreaX1 != -1 ) {
-            		int rectX = selectAreaX1 > selectAreaX2 ? selectAreaX2 : selectAreaX1;
-            		int rectY = selectAreaY1 > selectAreaY2 ? selectAreaY2 : selectAreaY1;
-
-                	g.setPaint(Color.red);
-                	g.draw( new Rectangle2D.Double(
-					  ( rectX - x ) * MapData.TILE_WIDTH + 1, ( rectY - y ) * MapData.TILE_HEIGHT + 1, 
-					  Math.abs( selectAreaX2 - selectAreaX1 ) * MapData.TILE_WIDTH + MapData.TILE_WIDTH,
-					  Math.abs( selectAreaY2 - selectAreaY1 ) * MapData.TILE_HEIGHT + MapData.TILE_HEIGHT ) );
-                	g.draw( new Rectangle2D.Double(
-					  ( rectX - x ) * MapData.TILE_WIDTH, ( rectY - y ) * MapData.TILE_HEIGHT, 
-					  Math.abs( selectAreaX2 - selectAreaX1 ) * MapData.TILE_WIDTH + MapData.TILE_WIDTH + 2,
-					  Math.abs( selectAreaY2 - selectAreaY1 ) * MapData.TILE_HEIGHT + MapData.TILE_HEIGHT + 2 ) );
-                	g.draw( new Rectangle2D.Double(
-					  ( rectX - x ) * MapData.TILE_WIDTH + 2, ( rectY - y ) * MapData.TILE_HEIGHT + 2, 
-					  Math.abs( selectAreaX2 - selectAreaX1 ) * MapData.TILE_WIDTH + MapData.TILE_WIDTH - 2,
-					  Math.abs( selectAreaY2 - selectAreaY1 ) * MapData.TILE_HEIGHT + MapData.TILE_HEIGHT - 2 ) );
-            	}
-            }
-			
-			//draw snakey selection
-            if( editMap && subMode != null && subMode.equals( "selectSnakeyArea" ) ) {
-            	if( selectSnake != null && selectSnake.size() > 0 ) {
-                	g.setPaint(Color.red);
-                	
-                	for( Point point: selectSnake ) {
-                		Point point2 = new Point( selectAreaX1 + point.x - x, selectAreaY1 + point.y - y );
-                		//left border
-                		if( !selectSnake.contains( new Point( point.x - 1, point.y ) ) ) {
-                    		g.draw( new Line2D.Double( point2.x * 32, point2.y * 32, point2.x * 32, ( point2.y + 1 ) * 32 + 2 ) );
-                    		g.draw( new Line2D.Double( point2.x * 32 + 1, point2.y * 32, point2.x * 32 + 1, ( point2.y + 1 ) * 32 + 2 ) );
-                    		g.draw( new Line2D.Double( point2.x * 32 + 2, point2.y * 32, point2.x * 32 + 2, ( point2.y + 1 ) * 32 + 2 ) );
-                    	}
-                		//top border
-                		if( !selectSnake.contains( new Point( point.x, point.y - 1 ) ) ) {
-                    		g.draw( new Line2D.Double( point2.x * 32, point2.y * 32, ( point2.x + 1 ) * 32, point2.y * 32 ) );
-                    		g.draw( new Line2D.Double( point2.x * 32, point2.y * 32 + 1, ( point2.x + 1 ) * 32, point2.y * 32 + 1 ) );
-                    		g.draw( new Line2D.Double( point2.x * 32, point2.y * 32 + 2, ( point2.x + 1 ) * 32, point2.y * 32 + 2 ) );
-                    	}
-                		//right border
-                		if( !selectSnake.contains( new Point( point.x + 1, point.y ) ) ) {
-                    		g.draw( new Line2D.Double( ( point2.x + 1 ) * 32, point2.y * 32, ( point2.x + 1 ) * 32, ( point2.y + 1 ) * 32 ) );
-                    		g.draw( new Line2D.Double( ( point2.x + 1 ) * 32 + 1, point2.y * 32, ( point2.x + 1 ) * 32 + 1, ( point2.y + 1 ) * 32 ) );
-                    		g.draw( new Line2D.Double( ( point2.x + 1 ) * 32 + 2, point2.y * 32, ( point2.x + 1 ) * 32 + 2, ( point2.y + 1 ) * 32 ) );
-                    	}
-                		//bottom border
-                		if( !selectSnake.contains( new Point( point.x, point.y + 1 ) ) ) {
-                    		g.draw( new Line2D.Double( point2.x * 32, ( point2.y + 1 ) * 32, ( point2.x + 1 ) * 32 + 2, ( point2.y + 1 ) * 32 ) );
-                    		g.draw( new Line2D.Double( point2.x * 32, ( point2.y + 1 ) * 32 + 1, ( point2.x + 1 ) * 32 + 2, ( point2.y + 1 ) * 32 + 1 ) );
-                    		g.draw( new Line2D.Double( point2.x * 32, ( point2.y + 1 ) * 32 + 2, ( point2.x + 1 ) * 32 + 2, ( point2.y + 1 ) * 32 + 2 ) );
-                    	}
-                	}
-            	}
-            }
 
 			if (editMap && (selectedSector != null)) {
 				int sXt, sYt;
@@ -771,9 +668,11 @@ public class MapEditor extends ToolModule implements ActionListener,
 								+ MapData.SECTOR_HEIGHT >= y)
 						&& (sYt < y + screenHeight)) {
 					g.setPaint(Color.yellow);
-					g.draw(new Rectangle2D.Double(
-					  (sXt - x) * MapData.TILE_WIDTH + 1, (sYt - y) * MapData.TILE_HEIGHT + 1, 
-					  MapData.SECTOR_WIDTH * MapData.TILE_WIDTH, MapData.SECTOR_HEIGHT* MapData.TILE_HEIGHT));
+					g.draw(new Rectangle2D.Double((sXt - x)
+							* MapData.TILE_WIDTH + 1, (sYt - y)
+							* MapData.TILE_HEIGHT + 1, MapData.SECTOR_WIDTH
+							* MapData.TILE_WIDTH, MapData.SECTOR_HEIGHT
+							* MapData.TILE_HEIGHT));
 				}
 			}
 
@@ -811,7 +710,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 									drawNumber(g, e.npcID, e.x + (j - x)
 											* MapData.TILE_WIDTH - wh[0] / 2,
 											e.y + (i - y) * MapData.TILE_HEIGHT
-													- wh[1] + 8, prefs.getValueAsBoolean( "useHexNumbers" ), true);
+													- wh[1] + 8, false, true);
 								}
 							}
 						} catch (Exception e) {
@@ -838,7 +737,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 						try {
 							area = map.getDoorArea(j >> 3, i >> 3);
 							for (MapData.Door e : area) {
-								g.setPaint(Color.WHITE);
+								g.setPaint(e.getColor());
 								g.draw(new Rectangle2D.Double(e.x * 8 + (j - x)
 										* MapData.TILE_WIDTH + 1, e.y * 8
 										+ (i - y) * MapData.TILE_HEIGHT + 1, 8,
@@ -847,11 +746,15 @@ public class MapEditor extends ToolModule implements ActionListener,
 										* MapData.TILE_WIDTH + 3, e.y * 8
 										+ (i - y) * MapData.TILE_HEIGHT + 3, 4,
 										4));
-								g.setPaint(Color.BLUE);
+								g.setPaint(Color.WHITE);
 								g.draw(new Rectangle2D.Double(e.x * 8 + (j - x)
 										* MapData.TILE_WIDTH + 2, e.y * 8
 										+ (i - y) * MapData.TILE_HEIGHT + 2, 6,
 										6));
+								g.draw(new Rectangle2D.Double(e.x * 8 + (j - x)
+										* MapData.TILE_WIDTH + 4, e.y * 8
+										+ (i - y) * MapData.TILE_HEIGHT + 4, 2,
+										2));
 							}
 						} catch (Exception e) {
 
@@ -860,14 +763,16 @@ public class MapEditor extends ToolModule implements ActionListener,
 				}
 
 				if (editDoors && (movingDoor != null)) {
-					g.setPaint(Color.WHITE);
+					g.setPaint(movingDoor.getColor());
 					g.draw(new Rectangle2D.Double(movingDrawX + 1,
 							movingDrawY + 1, 8, 8));
 					g.draw(new Rectangle2D.Double(movingDrawX + 3,
 							movingDrawY + 3, 4, 4));
-					g.setPaint(Color.BLUE);
+					g.setPaint(Color.WHITE);
 					g.draw(new Rectangle2D.Double(movingDrawX + 2,
 							movingDrawY + 2, 6, 6));
+					g.draw(new Rectangle2D.Double(movingDrawX + 4,
+							movingDrawY + 4, 2, 2));
 				}
 
 				if (seekDoor) {
@@ -876,9 +781,12 @@ public class MapEditor extends ToolModule implements ActionListener,
 							8, 8));
 					g.draw(new Rectangle2D.Double(seekDrawX + 3, seekDrawY + 3,
 							4, 4));
-					g.setPaint(Color.MAGENTA);
+
+					g.setPaint(new Color(57, 106, 177));
 					g.draw(new Rectangle2D.Double(seekDrawX + 2, seekDrawY + 2,
 							6, 6));
+					g.draw(new Rectangle2D.Double(seekDrawX + 4, seekDrawY + 4,
+							2, 2));
 				}
 			}
 
@@ -886,32 +794,27 @@ public class MapEditor extends ToolModule implements ActionListener,
 				g.setFont(new Font("Arial", Font.PLAIN, 12));
 				for (i = -(y % 2); i < screenHeight; i += 2) {
 					for (j = -(x % 2); j < screenWidth; j += 2) {
+						// Draw the grid
+						Rectangle2D rect = new Rectangle2D.Double(j
+								* MapData.TILE_WIDTH + 1, i
+								* MapData.TILE_HEIGHT + 1,
+								MapData.TILE_WIDTH * 2, MapData.TILE_HEIGHT * 2);
+						if (grid && !gamePreview) {
+							g.setColor(Color.BLACK);
+							g.draw(rect);
+						}
+
 						a = map.getMapEnemyGroup((x + j) / 2, (y + i) / 2);
 						if (a != 0) {
 							g.setComposite(AlphaComposite.getInstance(
 									AlphaComposite.SRC_OVER, 0.5F));
 							g.setPaint(enemyColors[a]);
-							g.fill(new Rectangle2D.Double(j
-									* MapData.TILE_WIDTH + 1, i
-									* MapData.TILE_HEIGHT + 1,
-									MapData.TILE_WIDTH * 2,
-									MapData.TILE_HEIGHT * 2));
+							g.fill(rect);
 
 							g.setComposite(AlphaComposite.getInstance(
 									AlphaComposite.SRC_OVER, 1.0F));
-							/*
-							 * g.setPaint(Color.black); message =
-							 * addZeros(Integer.toString(a), 3); rect =
-							 * g.getFontMetrics().getStringBounds(message, g);
-							 * rect.setRect( j * MapData.TILE_WIDTH + 1, i *
-							 * MapData.TILE_HEIGHT + 1, rect.getWidth(),
-							 * rect.getHeight()); g.fill(rect);
-							 * g.setPaint(Color.white); g.drawString(message,
-							 * (float) (j * MapData.TILE_WIDTH + 1), (float) (i
-							 * * MapData.TILE_HEIGHT + rect.getHeight()));
-							 */
 							drawNumber(g, a, j * MapData.TILE_WIDTH + 1, i
-									* MapData.TILE_HEIGHT + 1, prefs.getValueAsBoolean( "useHexNumbers" ), false);
+									* MapData.TILE_HEIGHT + 1, false, false);
 						}
 					}
 				}
@@ -938,10 +841,11 @@ public class MapEditor extends ToolModule implements ActionListener,
 								* MapData.TILE_WIDTH + 1, hs.y1 * 8 - y
 								* MapData.TILE_HEIGHT + 1, (hs.x2 - hs.x1) * 8,
 								(hs.y2 - hs.y1) * 8));
+
 						drawNumber(g, i,
 								hs.x1 * 8 - x * MapData.TILE_WIDTH + 1, hs.y1
 										* 8 - y * MapData.TILE_HEIGHT + 1,
-								prefs.getValueAsBoolean( "useHexNumbers" ), false);
+								false, false);
 					}
 				}
 
@@ -990,7 +894,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 			if (hex)
 				s = addZeros(Integer.toHexString(n), 4);
 			else
-				s = addZeros(Integer.toString(n), 3);
+				s = addZeros(Integer.toString(n), 4);
 
 			if (textBG == null)
 				textBG = g.getFontMetrics().getStringBounds(s, g);
@@ -1031,8 +935,14 @@ public class MapEditor extends ToolModule implements ActionListener,
 		public static Image getTileImage(int loadtset, int loadtile,
 				int loadpalette) {
 			if (tileImageCache[loadtset][loadtile][loadpalette] == null) {
-				tileImageCache[loadtset][loadtile][loadpalette] = TileEditor.tilesets[loadtset]
-						.getArrangementImage(loadtile, loadpalette);
+				try {
+					tileImageCache[loadtset][loadtile][loadpalette] = TileEditor.tilesets[loadtset]
+							.getArrangementImage(loadtile, loadpalette);
+				} catch (IndexOutOfBoundsException ioobe) {
+					System.err.println("Invalid tset/tile/pal: " + loadtset
+							+ "/" + loadtile + "/" + loadpalette);
+					ioobe.printStackTrace();
+				}
 			}
 			return tileImageCache[loadtset][loadtile][loadpalette];
 		}
@@ -1055,8 +965,10 @@ public class MapEditor extends ToolModule implements ActionListener,
 
 		public void setSelectedSectorTileset(int tset) {
 			selectedSector.tileset = tset;
-			sectorPal = TileEditor.tilesets[TileEditor.getDrawTilesetNumber(selectedSector.tileset)].
-							getPaletteNum(selectedSector.tileset,selectedSector.palette);
+			sectorPal = TileEditor.tilesets[TileEditor
+					.getDrawTilesetNumber(selectedSector.tileset)]
+					.getPaletteNum(selectedSector.tileset,
+							selectedSector.palette);
 		}
 
 		public void setSelectedSectorPalette(int pal) {
@@ -1108,179 +1020,24 @@ public class MapEditor extends ToolModule implements ActionListener,
 			MapData.Sector newS = map.getSector(sectorX, sectorY);
 			if (selectedSector != newS) {
 				selectedSector = newS;
-				sectorPal = TileEditor.tilesets[TileEditor.getDrawTilesetNumber(selectedSector.tileset)]
-						.getPaletteNum(selectedSector.tileset, selectedSector.palette);
+				sectorPal = TileEditor.tilesets[TileEditor
+						.getDrawTilesetNumber(selectedSector.tileset)]
+						.getPaletteNum(selectedSector.tileset,
+								selectedSector.palette);
 				copySector.setEnabled(true);
 				pasteSector.setEnabled(true);
+				copySector2.setEnabled(true);
+				pasteSector2.setEnabled(true);
 			} else {
 				// Un-select sector
 				selectedSector = null;
 				copySector.setEnabled(false);
 				pasteSector.setEnabled(false);
+				copySector2.setEnabled(false);
+				pasteSector2.setEnabled(false);
 			}
 			repaint();
 			this.fireActionPerformed(sectorEvent);
-		}
-
-		// Sprites
-		private MapData.SpriteEntry getSpriteEntryFromMouseXY(int mouseX,
-				int mouseY) {
-			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
-					/ MapData.TILE_HEIGHT) / 8;
-			mouseX += (x % 8) * MapData.TILE_WIDTH;
-			mouseX %= (MapData.TILE_WIDTH * 8);
-			mouseY += (y % 8) * MapData.TILE_HEIGHT;
-			mouseY %= (MapData.TILE_HEIGHT * 8);
-			return map.getSpriteEntryFromCoords(areaX, areaY, mouseX, mouseY);
-		}
-
-		private int popNpcIdFromMouseXY(int mouseX, int mouseY) {
-			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
-					/ MapData.TILE_HEIGHT) / 8;
-			mouseX += (x % 8) * MapData.TILE_WIDTH;
-			mouseX %= (MapData.TILE_WIDTH * 8);
-			mouseY += (y % 8) * MapData.TILE_HEIGHT;
-			mouseY %= (MapData.TILE_HEIGHT * 8);
-			return map.popNPCFromCoords(areaX, areaY, mouseX, mouseY);
-		}
-
-		private void pushNpcIdFromMouseXY(int npc, int mouseX, int mouseY) {
-			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
-					/ MapData.TILE_HEIGHT) / 8;
-			mouseX += (x % 8) * MapData.TILE_WIDTH;
-			mouseX %= (MapData.TILE_WIDTH * 8);
-			mouseY += (y % 8) * MapData.TILE_HEIGHT;
-			mouseY %= (MapData.TILE_HEIGHT * 8);
-			map.pushNPCFromCoords(npc, areaX, areaY, mouseX, mouseY);
-		}
-
-		// Doors
-		private MapData.Door getDoorFromMouseXY(int mouseX, int mouseY) {
-			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
-					/ MapData.TILE_HEIGHT) / 8;
-			mouseX += (x % 8) * MapData.TILE_WIDTH;
-			mouseX %= (MapData.TILE_WIDTH * 8);
-			mouseY += (y % 8) * MapData.TILE_HEIGHT;
-			mouseY %= (MapData.TILE_HEIGHT * 8);
-			return map.getDoorFromCoords(areaX, areaY, mouseX / 8, mouseY / 8);
-		}
-
-		private MapData.Door popDoorFromMouseXY(int mouseX, int mouseY) {
-			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
-					/ MapData.TILE_HEIGHT) / 8;
-			mouseX += (x % 8) * MapData.TILE_WIDTH;
-			mouseX %= (MapData.TILE_WIDTH * 8);
-			mouseY += (y % 8) * MapData.TILE_HEIGHT;
-			mouseY %= (MapData.TILE_HEIGHT * 8);
-			return map.popDoorFromCoords(areaX, areaY, mouseX / 8, mouseY / 8);
-		}
-
-		private void pushDoorFromMouseXY(MapData.Door door, int mouseX,
-				int mouseY) {
-			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
-					/ MapData.TILE_HEIGHT) / 8;
-			mouseX += (x % 8) * MapData.TILE_WIDTH;
-			mouseX %= (MapData.TILE_WIDTH * 8);
-			mouseY += (y % 8) * MapData.TILE_HEIGHT;
-			mouseY %= (MapData.TILE_HEIGHT * 8);
-			door.x = mouseX / 8;
-			door.y = mouseY / 8;
-			map.pushDoorFromCoords(door, areaX, areaY);
-		}
-
-		private static final Cursor blankCursor = Toolkit.getDefaultToolkit()
-				.createCustomCursor(
-						new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB),
-						new Point(0, 0), "blank cursor");
-
-		public void actionPerformed(ActionEvent ae) {
-			if (ae.getActionCommand().equals("newNPC")) {
-				pushNpcIdFromMouseXY(0, popupX, popupY);
-				repaint();
-			} else if (ae.getActionCommand().equals("delNPC")) {
-				popNpcIdFromMouseXY(popupX, popupY);
-				repaint();
-			} else if (ae.getActionCommand().equals("cutNPC")) {
-				copiedNPC = popNpcIdFromMouseXY(popupX, popupY);
-				repaint();
-			} else if (ae.getActionCommand().equals("copyNPC")) {
-				copiedNPC = popupSE.npcID;
-			} else if (ae.getActionCommand().equals("pasteNPC")) {
-				pushNpcIdFromMouseXY(copiedNPC, popupX, popupY);
-				repaint();
-			} else if (ae.getActionCommand().equals("switchNPC")) {
-				String input = JOptionPane.showInputDialog(this,
-						"Switch this to a different NPC", popupSE.npcID);
-				if (input != null) {
-					popupSE.npcID = Integer.parseInt(input);
-					repaint();
-				}
-			} else if (ae.getActionCommand().equals("newDoor")) {
-				pushDoorFromMouseXY(new MapData.Door(), popupX, popupY);
-				repaint();
-			} else if (ae.getActionCommand().equals("delDoor")) {
-				popDoorFromMouseXY(popupX, popupY);
-				repaint();
-			} else if (ae.getActionCommand().equals("cutDoor")) {
-				copiedDoor = popDoorFromMouseXY(popupX, popupY);
-				repaint();
-			} else if (ae.getActionCommand().equals("copyDoor")) {
-				copiedDoor = popupDoor.copy();
-			} else if (ae.getActionCommand().equals("pasteDoor")) {
-				pushDoorFromMouseXY(copiedDoor.copy(), popupX, popupY);
-				repaint();
-			} else if (ae.getActionCommand().equals("editDoor")) {
-				ebhack.Ebhack.main.showModule(DoorEditor.class, popupDoor);
-			}
-		}
-
-
-		public void externalCommand(String cmd) {
-			if( cmd.equals( "highlightMultipleTiles" ) ) {			
-				if( this.subMode != null && this.subMode.equals( "highlightMultipleTiles" ) ) {
-					this.subMode = null;
-					mapEditor.statusLabel.setText( "Exited Highlight Tiles Mode" );
-				} else {
-					clearSubmodes();
-					this.subMode = "highlightMultipleTiles";
-					this.highlightedTiles = null;	
-					mapEditor.statusLabel.setText( "Entered Highlight Tiles Mode" );
-				}
-				tileSelector.repaint();
-			} else if( cmd.equals( "selectArea" ) ) {
-				if( this.subMode != null && this.subMode.equals( "selectArea" ) ) {
-					this.subMode = null;
-					mapEditor.statusLabel.setText( "Exited Select Area Mode" );
-
-					this.setCursor( Cursor.getDefaultCursor() );
-				} else {
-					mapEditor.statusLabel.setText( "Entered Select Area Mode" );
-					clearSubmodes();
-					this.subMode = "selectArea";
-					this.selectAreaX1 = -1;
-					this.selectAreaY1 = -1;
-					this.selectAreaX2 = -1;
-					this.selectAreaY2 = -1;
-					
-					this.setCursor( new Cursor( Cursor.CROSSHAIR_CURSOR ) );
-				}
-			} else if( cmd.equals( "selectSnakeyArea" ) ) {
-				if( this.subMode != null && this.subMode.equals( "selectSnakeyArea" ) ) {
-					this.subMode = null;
-					mapEditor.statusLabel.setText( "Exited Select Snakey Area Mode" );
-
-					this.setCursor( Cursor.getDefaultCursor() );
-				} else {
-					mapEditor.statusLabel.setText( "Entered Select Snakey Area Mode" );
-					clearSubmodes();
-					this.subMode = "selectSnakeyArea";
-					this.selectAreaX1 = -1;
-					this.selectAreaY1 = -1;
-					
-					this.setCursor( new Cursor( Cursor.HAND_CURSOR ) );
-				}
-			}
-			repaint();
 		}
 
 		public void mouseClicked(MouseEvent e) {
@@ -1290,49 +1047,60 @@ public class MapEditor extends ToolModule implements ActionListener,
 					&& (e.getY() >= 1)
 					&& (e.getY() <= screenHeight * MapData.TILE_HEIGHT + 2)) {
 				if (editMap) {
-					if( subMode == null ) {
-						//select sector
-						if (e.getButton() == MouseEvent.BUTTON3) {
-							// Make sure they didn't click on the border
-							int sX = (x + ((e.getX() - 1) / MapData.TILE_WIDTH))
-									/ MapData.SECTOR_WIDTH;
-							int sY = (y + ((e.getY() - 1) / MapData.TILE_HEIGHT))
-									/ MapData.SECTOR_HEIGHT;
-							selectSector(sX, sY);
-							
-							dragType = null;
+					if (e.getButton() == MouseEvent.BUTTON1) {
+						int mX = (e.getX() - 1) / MapData.TILE_WIDTH + x;
+						int mY = (e.getY() - 1) / MapData.TILE_HEIGHT + y;
+						if (e.isShiftDown()) {
+							tileSelector.selectTile(map.getMapTile(mX, mY));
+						} else if (!e.isControlDown()) {
+							// Keep track of the undo stuff
+							undoStack.push(new UndoableTileChange(mX, mY, map
+									.getMapTile(mX, mY), tileSelector
+									.getSelectedTile()));
+							undoButton.setEnabled(true);
+							redoStack.clear();
+
+							map.setMapTile(mX, mY,
+									tileSelector.getSelectedTile());
+							repaint();
 						}
-					} else if( subMode.equals( "highlightMultipleTiles" ) ) {
-						int mX = ( e.getX() - 1 ) / MapData.TILE_WIDTH + x;
-						int mY = ( e.getY() - 1 ) / MapData.TILE_HEIGHT + y;
-						if( this.highlightedTiles == null ) {
-							this.highlightedTiles = new ArrayList<Integer>();
-						}
-						int mapTile = map.getMapTile( mX, mY );
-						if( !highlightedTiles.contains( mapTile ) ) {
-							highlightedTiles.add( new Integer( map.getMapTile( mX, mY ) ) );
-						}
-						repaint();
-						tileSelector.repaint();
-					} 
+					} else if (e.getButton() == MouseEvent.BUTTON3) {
+						// Make sure they didn't click on the border
+						int sX = (x + ((e.getX() - 1) / MapData.TILE_WIDTH))
+								/ MapData.SECTOR_WIDTH;
+						int sY = (y + ((e.getY() - 1) / MapData.TILE_HEIGHT))
+								/ MapData.SECTOR_HEIGHT;
+						selectSector(sX, sY);
+					}
 				} else if (editSprites) {
 					if (e.getButton() == MouseEvent.BUTTON3) {
 						popupX = e.getX();
 						popupY = e.getY();
 						popupSE = getSpriteEntryFromMouseXY(e.getX(), e.getY());
 						if (popupSE == null) {
+							detailsNPC.setText("No Sprite Selected");
 							delNPC.setEnabled(false);
 							cutNPC.setEnabled(false);
 							copyNPC.setEnabled(false);
 							switchNPC.setText("Switch NPC");
 							switchNPC.setEnabled(false);
+                            moveNPC.setEnabled(false);
 						} else {
+							final int areaX = ((x + popupX / MapData.TILE_WIDTH) / 8)
+									* MapData.TILE_WIDTH * 8;
+							final int areaY = ((y + popupY
+									/ MapData.TILE_HEIGHT) / 8)
+									* MapData.TILE_HEIGHT * 8;
+							detailsNPC.setText("Sprite @ ("
+									+ (areaX + popupSE.x) + ","
+									+ (areaY + popupSE.y) + ")");
 							delNPC.setEnabled(true);
 							cutNPC.setEnabled(true);
 							copyNPC.setEnabled(true);
 							switchNPC.setText("Switch NPC (" + popupSE.npcID
 									+ ")");
 							switchNPC.setEnabled(true);
+                            moveNPC.setEnabled(true);
 						}
 						spritePopupMenu.show(this, e.getX(), e.getY());
 					}
@@ -1342,15 +1110,29 @@ public class MapEditor extends ToolModule implements ActionListener,
 						popupY = e.getY();
 						popupDoor = getDoorFromMouseXY(e.getX(), e.getY());
 						if (popupDoor == null) {
+							detailsDoor.setText("No Door Selected");
 							delDoor.setEnabled(false);
 							cutDoor.setEnabled(false);
 							copyDoor.setEnabled(false);
 							editDoor.setEnabled(false);
+							jumpDoor.setEnabled(false);
 						} else {
+							final int areaX = ((x + popupX / MapData.TILE_WIDTH) / MapData.SECTOR_WIDTH)
+									* MapData.SECTOR_WIDTH * (MapData.TILE_WIDTH / 8);
+							final int areaY = ((y + popupY / MapData.TILE_HEIGHT) / (MapData.SECTOR_HEIGHT * 2))
+									* MapData.SECTOR_HEIGHT * (MapData.TILE_HEIGHT / 8);
+							detailsDoor.setText(ToolModule
+									.capitalize(popupDoor.type)
+									+ " @ ("
+									+ (areaX + popupDoor.x)
+									+ ","
+									+ (areaY + popupDoor.y) + ")");
 							delDoor.setEnabled(true);
 							cutDoor.setEnabled(true);
 							copyDoor.setEnabled(true);
 							editDoor.setEnabled(true);
+							jumpDoor.setEnabled(popupDoor.type.equals("door"));
+
 						}
 						doorPopupMenu.show(this, e.getX(), e.getY());
 					}
@@ -1404,9 +1186,153 @@ public class MapEditor extends ToolModule implements ActionListener,
 			}
 		}
 
+		public void actionPerformed(ActionEvent ae) {
+			if (ae.getActionCommand().equals("newNPC")) {
+				pushNpcIdFromMouseXY(0, popupX, popupY);
+				repaint();
+			} else if (ae.getActionCommand().equals("delNPC")) {
+				popNpcIdFromMouseXY(popupX, popupY);
+				repaint();
+			} else if (ae.getActionCommand().equals("cutNPC")) {
+				copiedNPC = popNpcIdFromMouseXY(popupX, popupY);
+				repaint();
+			} else if (ae.getActionCommand().equals("copyNPC")) {
+				copiedNPC = popupSE.npcID;
+			} else if (ae.getActionCommand().equals("pasteNPC")) {
+				pushNpcIdFromMouseXY(copiedNPC, popupX, popupY);
+				repaint();
+			} else if (ae.getActionCommand().equals("switchNPC")) {
+				String input = JOptionPane.showInputDialog(this,
+						"Switch this to a different NPC", popupSE.npcID);
+				if (input != null) {
+					popupSE.npcID = Integer.parseInt(input);
+					repaint();
+				}
+            } else if (ae.getActionCommand().equals("moveNPC")) {
+                int areaX = (x + popupX / MapData.TILE_WIDTH) / 8;
+                int areaY = (y + popupY / MapData.TILE_HEIGHT) / 8;
+
+                final int newSpriteX, newSpriteY;
+
+                String input = JOptionPane.showInputDialog(this,
+                        "New X in pixels", areaX * MapData.TILE_WIDTH * 8 + popupSE.x);
+                if (input == null)
+                    return;
+                newSpriteX = Integer.parseInt(input);
+
+                input = JOptionPane.showInputDialog(this,
+                        "New Y in pixels", areaY * MapData.TILE_HEIGHT * 8 + popupSE.y);
+                if (input == null)
+                    return;
+                newSpriteY = Integer.parseInt(input);
+
+                popNpcIdFromMouseXY(popupX, popupY);
+                pushNpcIdFromMapPixelXY(popupSE.npcID, newSpriteX, newSpriteY);
+
+                repaint();
+			} else if (ae.getActionCommand().equals("newDoor")) {
+				pushDoorFromMouseXY(new MapData.Door(), popupX, popupY);
+				repaint();
+			} else if (ae.getActionCommand().equals("delDoor")) {
+				popDoorFromMouseXY(popupX, popupY);
+				repaint();
+			} else if (ae.getActionCommand().equals("cutDoor")) {
+				copiedDoor = popDoorFromMouseXY(popupX, popupY);
+				repaint();
+			} else if (ae.getActionCommand().equals("copyDoor")) {
+				copiedDoor = popupDoor.copy();
+			} else if (ae.getActionCommand().equals("pasteDoor")) {
+				pushDoorFromMouseXY(copiedDoor.copy(), popupX, popupY);
+				repaint();
+			} else if (ae.getActionCommand().equals("editDoor")) {
+				ebhack.Ebhack.main.showModule(DoorEditor.class, popupDoor);
+			} else if (ae.getActionCommand().equals("jumpDoor")) {
+				ebhack.Ebhack.main.showModule(MapEditor.class, new int[] {
+						popupDoor.destX * 8, popupDoor.destY * 8 });
+			}
+		}
+
+		// Sprites
+		private MapData.SpriteEntry getSpriteEntryFromMouseXY(int mouseX,
+				int mouseY) {
+			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
+					/ MapData.TILE_HEIGHT) / 8;
+			mouseX += (x % 8) * MapData.TILE_WIDTH;
+			mouseX %= (MapData.TILE_WIDTH * 8);
+			mouseY += (y % 8) * MapData.TILE_HEIGHT;
+			mouseY %= (MapData.TILE_HEIGHT * 8);
+			return map.getSpriteEntryFromCoords(areaX, areaY, mouseX, mouseY);
+		}
+
+		private int popNpcIdFromMouseXY(int mouseX, int mouseY) {
+			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
+					/ MapData.TILE_HEIGHT) / 8;
+			mouseX += (x % 8) * MapData.TILE_WIDTH;
+			mouseX %= (MapData.TILE_WIDTH * 8);
+			mouseY += (y % 8) * MapData.TILE_HEIGHT;
+			mouseY %= (MapData.TILE_HEIGHT * 8);
+			return map.popNPCFromCoords(areaX, areaY, mouseX, mouseY);
+		}
+
+		private void pushNpcIdFromMouseXY(int npc, int mouseX, int mouseY) {
+			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
+					/ MapData.TILE_HEIGHT) / 8;
+			mouseX += (x % 8) * MapData.TILE_WIDTH;
+			mouseX %= (MapData.TILE_WIDTH * 8);
+			mouseY += (y % 8) * MapData.TILE_HEIGHT;
+			mouseY %= (MapData.TILE_HEIGHT * 8);
+			map.pushNPCFromCoords(npc, areaX, areaY, mouseX, mouseY);
+		}
+
+        private void pushNpcIdFromMapPixelXY(int npc, int mapPixelX, int mapPixelY) {
+            final int areaX = (mapPixelX / MapData.TILE_WIDTH) / 8;
+            final int areaY = (mapPixelY / MapData.TILE_HEIGHT) / 8;
+            mapPixelX %= (MapData.TILE_WIDTH * 8);
+            mapPixelY %= (MapData.TILE_HEIGHT * 8);
+            map.pushNPCFromCoords(npc, areaX, areaY, mapPixelX, mapPixelY);
+        }
+
+		// Doors
+		private MapData.Door getDoorFromMouseXY(int mouseX, int mouseY) {
+			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
+					/ MapData.TILE_HEIGHT) / 8;
+			mouseX += (x % 8) * MapData.TILE_WIDTH;
+			mouseX %= (MapData.TILE_WIDTH * 8);
+			mouseY += (y % 8) * MapData.TILE_HEIGHT;
+			mouseY %= (MapData.TILE_HEIGHT * 8);
+			return map.getDoorFromCoords(areaX, areaY, mouseX / 8, mouseY / 8);
+		}
+
+		private MapData.Door popDoorFromMouseXY(int mouseX, int mouseY) {
+			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
+					/ MapData.TILE_HEIGHT) / 8;
+			mouseX += (x % 8) * MapData.TILE_WIDTH;
+			mouseX %= (MapData.TILE_WIDTH * 8);
+			mouseY += (y % 8) * MapData.TILE_HEIGHT;
+			mouseY %= (MapData.TILE_HEIGHT * 8);
+			return map.popDoorFromCoords(areaX, areaY, mouseX / 8, mouseY / 8);
+		}
+
+		private void pushDoorFromMouseXY(MapData.Door door, int mouseX,
+				int mouseY) {
+			int areaX = (x + mouseX / MapData.TILE_WIDTH) / 8, areaY = (y + mouseY
+					/ MapData.TILE_HEIGHT) / 8;
+			mouseX += (x % 8) * MapData.TILE_WIDTH;
+			mouseX %= (MapData.TILE_WIDTH * 8);
+			mouseY += (y % 8) * MapData.TILE_HEIGHT;
+			mouseY %= (MapData.TILE_HEIGHT * 8);
+			door.x = mouseX / 8;
+			door.y = mouseY / 8;
+			map.pushDoorFromCoords(door, areaX, areaY);
+		}
+
+		private static final Cursor blankCursor = Toolkit.getDefaultToolkit()
+				.createCustomCursor(
+						new BufferedImage(16, 16, BufferedImage.TYPE_INT_ARGB),
+						new Point(0, 0), "blank cursor");
+
 		public void mousePressed(MouseEvent e) {
 			int mx = e.getX(), my = e.getY();
-			//TV Preview
 			if (e.isControlDown() && (e.getButton() == MouseEvent.BUTTON1)) {
 				if (togglePreviousMode == -1) {
 					togglePreviousMode = previousMode;
@@ -1426,8 +1352,6 @@ public class MapEditor extends ToolModule implements ActionListener,
 					this.setCursor(blankCursor);
 					repaint();
 				}
-			//Dragging a sprite/door 
-			//OR: "Dragging" a tile (paintbrush-like behavior)
 			} else if (e.getButton() == MouseEvent.BUTTON1) {
 				if (editSprites && (movingNPC == -1)) {
 					movingNPC = popNpcIdFromMouseXY(mx, my);
@@ -1447,127 +1371,6 @@ public class MapEditor extends ToolModule implements ActionListener,
 						movingDrawY = my & (~7);
 						repaint();
 					}
-				} else if( (e.getX() >= 1)
-						&& (e.getX() <= screenWidth * MapData.TILE_WIDTH + 2)
-						&& (e.getY() >= 1)
-						&& (e.getY() <= screenHeight * MapData.TILE_HEIGHT + 2)
-						&& editMap ) {
-					int mX = (e.getX() - 1) / MapData.TILE_WIDTH + x;
-					int mY = (e.getY() - 1) / MapData.TILE_HEIGHT + y;
-					if( subMode == null ) {
-						if( e.getButton() == MouseEvent.BUTTON1 && enableDraggingTiles ) {
-							if (e.isShiftDown()) {
-								tileSelector.selectTile(map.getMapTile(mX, mY));
-							} else if( e.isControlDown() ) {							
-							} else {
-								int oldTile = map.getMapTile( mX, mY );
-								int newTile = tileSelector.getSelectedTile();
-								
-								dragType = "dragTiles";
-								
-								if( oldTile != newTile ) {
-									// Keep track of the undo stuff
-									undoStack.push( new UndoableTileChange( mX, mY, oldTile, newTile ) );
-									undoButton.setEnabled( true );
-									redoStack.clear();
-		
-									map.setMapTile( mX, mY, tileSelector.getSelectedTile() );
-									repaint();
-								}
-								
-								dragTileX = mX;
-								dragTileY = mY;
-							}
-						}
-					} else if( subMode.equals( "selectArea" ) ) {
-						dragType = "select";
-						
-						selectAreaX1 = selectAreaX2 = mX;
-						selectAreaY1 = selectAreaY2 = mY;
-						
-						repaint();
-					} else if( subMode.equals( "selectSnakeyArea" ) ) {
-						dragType = "selectSnake";
-						
-						selectAreaX1 = mX;
-						selectAreaY1 = mY;
-						selectSnake = new ArrayList<Point>();
-						selectSnake.add( new Point( 0, 0 ) );//selectSnake's points are relative to the first
-						
-						selectAreaX2 = mX;
-						selectAreaY2 = mY;//last point selected, for efficiency purposes
-						
-						repaint();
-					}
-				}
-			}  else if( e.getButton() == MouseEvent.BUTTON3 ) {
-				/**TODO: Select multiple sectors?*/
-				if( subMode == null ) {
-				}
-				//Paste Area
-				else if( subMode.equals( "selectArea" ) ) {
-					dragType = "paste";
-					
-					int mX = (e.getX() - 1) / MapData.TILE_WIDTH + x;
-					int mY = (e.getY() - 1) / MapData.TILE_HEIGHT + y;
-					
-					//copy tiles from selection
-            		int rectX = selectAreaX1 > selectAreaX2 ? selectAreaX2 : selectAreaX1;
-            		int rectY = selectAreaY1 > selectAreaY2 ? selectAreaY2 : selectAreaY1;
-            		int rectWidth  = Math.abs( selectAreaX2 - selectAreaX1 ) + 1;
-            		int rectHeight = Math.abs( selectAreaY2 - selectAreaY1 ) + 1;
-            		
-            		//save old tiles (for undo)
-            		int[][] oldTiles = new int[rectWidth][rectHeight];
-            		for( int i = 0; i < rectWidth; i++ ) {
-            			for( int j = 0; j < rectHeight; j++ ) {
-            				oldTiles[i][j] = map.getMapTile( mX + i, mY + j );
-            			}
-            		}
-            		
-            		//read the new tiles 
-            		int[][] newTiles = new int[rectWidth][rectHeight];            	
-            		for( int i = 0; i < rectWidth; i++ ) {
-            			for( int j = 0; j < rectHeight; j++ ) {
-            				newTiles[i][j] = map.getMapTile( rectX + i, rectY + j );
-            			}
-            		}
-
-        			//set the new tiles (broken up in case the regions overlap)
-            		for( int i = 0; i < rectWidth; i++ ) {
-            			for( int j = 0; j < rectHeight; j++ ) {
-            				map.setMapTile( mX + i, mY + j, newTiles[i][j] );
-            			}
-            		}
-            		
-            		undoStack.push( new UndoablePaste( mX, mY, oldTiles, newTiles ) );
-					undoButton.setEnabled( true );
-					redoStack.clear();
-					repaint();
-				} else if( subMode.equals( "selectSnakeyArea" ) ) {
-					dragType = "snakeyPaste";
-					
-					int mX = (e.getX() - 1) / MapData.TILE_WIDTH + x;
-					int mY = (e.getY() - 1) / MapData.TILE_HEIGHT + y;
-					
-					selectAreaX2 = mX;
-					selectAreaY2 = mY;//for efficiency - only move pastes if one is different
-					
-					//save old tiles (for undo), read new tiles
-            		int[] oldTiles = new int[selectSnake.size()];
-            		int[] fromTiles = new int[selectSnake.size()];
-            		for( int i = 0; i < oldTiles.length; i++ ) {
-        				oldTiles[i] = map.getMapTile( mX + selectSnake.get( i ).x,  mY + selectSnake.get( i ).y );
-            			fromTiles[i] = map.getMapTile( selectAreaX1 + selectSnake.get( i ).x, selectAreaY1 + selectSnake.get( i ).y );
-            		}
-            		
-            		UndoableSnakeyPaste undo = new UndoableSnakeyPaste( mX, mY, selectSnake, oldTiles, fromTiles );
-            		undo.redo( map );//cheating by using the redo code to set the tiles
-            		
-            		undoStack.push( undo );
-					undoButton.setEnabled( true );
-					redoStack.clear();
-					repaint();
 				}
 			}
 		}
@@ -1589,30 +1392,6 @@ public class MapEditor extends ToolModule implements ActionListener,
 					pushDoorFromMouseXY(movingDoor, mx, my);
 					movingDoor = null;
 					repaint();
-				} else if( editMap && subMode == null ) {
-					dragTileX = dragTileY = -1;
-					mapEditor.statusLabel.setText( "OK" );
-				} else if( editMap && subMode.equals( "selectArea" ) ) {
-					if( dragType == null ) {
-						mapEditor.statusLabel.setText( "dragType is null wtf" );
-					}
-					if( dragType.equals( "select" ) ) {
-						mapEditor.statusLabel.setText( "Select finished" );
-						dragType = null;
-					}
-				}
-			} else if( e.getButton() == 3 ) {
-				if( dragType == null ) {
-				}
-				//Paste
-				else if( dragType.equals( "paste" ) ) {
-					mapEditor.statusLabel.setText( "Paste finished" );
-					dragType = null;
-				}
-				//Paste snake
-				else if( dragType.equals( "snakeyPaste" ) ) {
-					mapEditor.statusLabel.setText( "Snakey Paste finished" );
-					dragType = null;
 				}
 			}
 		}
@@ -1625,8 +1404,9 @@ public class MapEditor extends ToolModule implements ActionListener,
 
 		@Override
 		public void mouseExited(MouseEvent e) {
-			// TODO Auto-generated method stub
-
+			pixelCoordLabel.setText("Pixel X,Y: (-,-)");
+			warpCoordLabel.setText("Warp X,Y: (-,-)");
+			tileCoordLabel.setText("Tile X,Y: (-,-)");
 		}
 
 		public void mouseDragged(MouseEvent e) {
@@ -1642,124 +1422,9 @@ public class MapEditor extends ToolModule implements ActionListener,
 				movingDrawX = e.getX() & (~7);
 				movingDrawY = e.getY() & (~7);
 				repaint();
-			} else if( editMap ) {
-				int mX = (e.getX() - 1) / MapData.TILE_WIDTH + x;
-				int mY = (e.getY() - 1) / MapData.TILE_HEIGHT + y;
-				
-				if( subMode == null ) { 
-					mapEditor.statusLabel.setText( "dragType: " + dragType );
-					//Pencil-dragging tiles
-					if( dragType != null && dragType.equals( "dragTiles" ) ) {
-						if( enableDraggingTiles ) {
-							mapEditor.statusLabel.setText( "dragging tiles" );
-							if( e.isControlDown() ) {							
-							} else if( mX != dragTileX || mY != dragTileY ) {
-								// Keep track of the undo stuff
-								undoStack.push( new UndoableTileChange( mX, mY, 
-										map.getMapTile( mX, mY ), tileSelector.getSelectedTile() ) );
-								undoButton.setEnabled( true );
-								redoStack.clear();
-		
-								map.setMapTile( mX, mY, tileSelector.getSelectedTile() );
-								repaint();
-								
-								dragTileX = mX;
-								dragTileY = mY;
-							}
-						}
-					}
-				} else if( subMode.equals( "selectArea" ) ) {
-					if( dragType == null ) {
-						mapEditor.statusLabel.setText( "null dragType in selectArea mode... ???" );
-					}
-					
-					//Select Area
-					if( dragType.equals( "select" ) ) {
-						mapEditor.statusLabel.setText( "Selecting Area" );
-						
-						selectAreaX2 = mX;
-						selectAreaY2 = mY;
-						
-						repaint();
-					}
-					//Paste
-					else if( dragType.equals( "paste" ) ) {
-						UndoablePaste undo = (UndoablePaste)undoStack.lastElement();
-						
-						if( undo.x != mX || undo.y != mY ) {
-							mapEditor.statusLabel.setText( "Pasting/Moving Paste" );
-							
-							undoStack.pop();
-							undo.undo( map );
-							
-							int rectWidth = undo.oldTiles.length;
-							int rectHeight = undo.oldTiles[0].length;
-							
-							//save old tiles (for undo)
-		            		int[][] oldTiles = new int[rectWidth][rectHeight];
-		            		for( int i = 0; i < rectWidth; i++ ) {
-		            			for( int j = 0; j < rectHeight; j++ ) {
-		            				oldTiles[i][j] = map.getMapTile( mX + i, mY + j );
-		            			}
-		            		}
-							
-							undo.x = mX;
-							undo.y = mY;
-							undo.oldTiles = oldTiles;
-							
-							undo.redo( map );
-							undoStack.push( undo );
-							
-							repaint();
-						}
-					}
-				} else if( subMode.equals( "selectSnakeyArea" ) ) {
-					if( dragType == null ) {
-						mapEditor.statusLabel.setText( "How did dragType get to be null at such a time?" );
-					}
-					//Select Snakey Area
-					else if( dragType.equals( "selectSnake" ) ) {
-						if( mX != selectAreaX2 || mY != selectAreaY2 ) {
-							mapEditor.statusLabel.setText( "Selecting Snakey Area" );
-							
-							Point point = new Point( mX - selectAreaX1, mY - selectAreaY1 );
-							if( !selectSnake.contains( point ) ) {
-								selectSnake.add( point );
-								mapEditor.statusLabel.setText( "Point been added!!" );
-							}
-							
-							selectAreaX2 = mX;
-							selectAreaY2 = mY;
-						}
-					}
-					//Snakey Paste
-					else if( dragType.equals( "snakeyPaste" ) ) {
-						if( mX != selectAreaX2 || mY != selectAreaY2 ) {
-							mapEditor.statusLabel.setText( "Moving Snakey Paste" );
-							
-							UndoableSnakeyPaste undo = (UndoableSnakeyPaste)undoStack.pop();
-							undo.undo( map );
-							
-							//save old tiles (for undo)
-		            		int[] oldTiles = new int[undo.oldTiles.length];
-		            		for( int i = 0; i < oldTiles.length; i++ ) {
-		        				oldTiles[i] = map.getMapTile( mX + selectSnake.get( i ).x, mY + selectSnake.get( i ).y );
-		            		}
-							
-							undo.x = mX;
-							undo.y = mY;
-							undo.oldTiles = oldTiles;
-							
-							undo.redo( map );
-							undoStack.push( undo );
-							
-							selectAreaX2 = mX;
-							selectAreaY2 = mY;
-						}
-					}
-					repaint();
-				}
 			}
+
+            updateCoordLabels(e.getX(), e.getY());
 		}
 
 		public void mouseMoved(MouseEvent e) {
@@ -1772,15 +1437,43 @@ public class MapEditor extends ToolModule implements ActionListener,
 				hsMouseY = e.getY() & (~7);
 				repaint();
 			}
+
+            updateCoordLabels(e.getX(), e.getY());
 		}
 
-		//called when submode is changed
-		public void clearSubmodes() {
-			subMode = null;
-		}
-		
+        private void updateCoordLabels(final int mouseX, final int mouseY) {
+            if ((mouseX >= 0) && (mouseY >= 0)) {
+                pixelCoordLabel.setText("Pixel X,Y: ("
+                        + (x * MapData.TILE_WIDTH + mouseX - 1) + ","
+                        + (y * MapData.TILE_WIDTH + mouseY - 1) + ")");
+                warpCoordLabel.setText("Warp X,Y: ("
+                        + (x * 4 + (mouseX - 1) / 8) + ","
+                        + (y * 4 + (mouseY - 1) / 8) + ")");
+                tileCoordLabel.setText("Tile X,Y: ("
+                        + (x + (mouseX - 1) / MapData.TILE_WIDTH) + ","
+                        + (y + (mouseY - 1) / MapData.TILE_HEIGHT) + ")");
+            }
+        }
+
 		public void changeMode(int mode) {
 			gamePreview = mode == 9;
+
+			if (mode == 0) {
+				undoButton.setEnabled(!undoStack.isEmpty());
+				redoButton.setEnabled(!redoStack.isEmpty());
+				copySector.setEnabled(selectedSector != null);
+				pasteSector.setEnabled(selectedSector != null);
+				copySector2.setEnabled(selectedSector != null);
+				pasteSector2.setEnabled(selectedSector != null);
+			} else {
+				undoButton.setEnabled(false);
+				redoButton.setEnabled(false);
+				copySector.setEnabled(false);
+				pasteSector.setEnabled(false);
+				copySector2.setEnabled(false);
+				pasteSector2.setEnabled(false);
+			}
+
 			if (mode == 0) {
 				previousMode = mode;
 				// Map Mode
@@ -1904,14 +1597,6 @@ public class MapEditor extends ToolModule implements ActionListener,
 			drawTileNums = !drawTileNums;
 		}
 
-		public void toggleTileDragging() {
-			enableDraggingTiles = !enableDraggingTiles;
-		}
-
-		public void toggleHighlighting() {
-			enableHighlighting = !enableHighlighting;
-		}
-
 		public void toggleSpriteNums() {
 			drawSpriteNums = !drawSpriteNums;
 		}
@@ -1923,8 +1608,14 @@ public class MapEditor extends ToolModule implements ActionListener,
 
 		public boolean undoMapAction() {
 			if (!undoStack.empty()) {
-				UndoableAction undo = undoStack.pop();
-				undo.undo( map );
+				Object undo = undoStack.pop();
+				if (undo instanceof UndoableTileChange) {
+					UndoableTileChange tc = (UndoableTileChange) undo;
+					map.setMapTile(tc.x, tc.y, tc.oldTile);
+				} else if (undo instanceof UndoableSectorPaste) {
+					// UndoableSectorPaste usp = (UndoableSectorPaste) undo;
+					// TODO
+				}
 				if (undoStack.isEmpty())
 					undoButton.setEnabled(false);
 				redoStack.push(undo);
@@ -1937,8 +1628,13 @@ public class MapEditor extends ToolModule implements ActionListener,
 
 		public boolean redoMapAction() {
 			if (!redoStack.empty()) {
-				UndoableAction redo = redoStack.pop();
-				redo.redo( map );
+				Object redo = redoStack.pop();
+				if (redo instanceof UndoableTileChange) {
+					UndoableTileChange tc = (UndoableTileChange) redo;
+					map.setMapTile(tc.x, tc.y, tc.newTile);
+				} else if (redo instanceof UndoableSectorPaste) {
+					// TODO
+				}
 				if (redoStack.isEmpty())
 					redoButton.setEnabled(false);
 				undoStack.push(redo);
@@ -1982,14 +1678,12 @@ public class MapEditor extends ToolModule implements ActionListener,
 		private int width, height;
 		private int tile = 0, mode = 0;
 		private JScrollBar scroll;
-		private MapDisplay mapDisplay;
 
-		public TileSelector(int width, int height, MapDisplay mapDisplay) {
+		public TileSelector(int width, int height) {
 			super();
 
 			this.width = width;
 			this.height = height;
-			this.mapDisplay = mapDisplay;
 
 			scroll = new JScrollBar(JScrollBar.HORIZONTAL, 0, width, 0,
 					(1024 / height) + (1024 % height > 0 ? 1 : 0));
@@ -2038,13 +1732,10 @@ public class MapEditor extends ToolModule implements ActionListener,
 		public void selectTile(int tile) {
 			this.tile = tile;
 			if ((tile < scroll.getValue() * height)
-					|| (tile > (scroll.getValue() + width + 1) * height)) {
+					|| (tile > (scroll.getValue() + width + 1) * height))
 				scroll.setValue(tile / height);
-			}
-			else {
+			else
 				repaint();
-			}
-			mapDisplay.repaint();
 		}
 
 		public int getSelectedTile() {
@@ -2116,25 +1807,23 @@ public class MapEditor extends ToolModule implements ActionListener,
 				for (int j = 0; j < height; j++) {
 					dtile = (i + scroll.getValue()) * height + j;
 					if (dtile < 1024) {
-                        Image tileImage = MapDisplay.getTileImage(TileEditor.getDrawTilesetNumber(tilesetChooser.getSelectedIndex()), dtile, mapDisplay.getSelectedSectorPalNumber());
-						g.drawImage( tileImage, 
-                                i * MapData.TILE_WIDTH + 1, 
-                                j * MapData.TILE_HEIGHT + 1, 
-                                MapData.TILE_WIDTH,
-								MapData.TILE_HEIGHT, 
-                                this );
+						g.drawImage(MapDisplay.getTileImage(TileEditor
+								.getDrawTilesetNumber(tilesetChooser
+										.getSelectedIndex()), dtile, mapDisplay
+								.getSelectedSectorPalNumber()), i
+								* MapData.TILE_WIDTH + 1, j
+								* MapData.TILE_HEIGHT + 1, MapData.TILE_WIDTH,
+								MapData.TILE_HEIGHT, this);
 						if (dtile == tile) {
-							g.setPaint(Color.white);
-							g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6F));
-							g.fillRect(i * MapData.TILE_WIDTH + 1, j * MapData.TILE_HEIGHT + 1,
+							g.setPaint(Color.yellow);
+							g.setComposite(AlphaComposite.getInstance(
+									AlphaComposite.SRC_OVER, 0.6F));
+							g.fillRect(i * MapData.TILE_WIDTH + 1, j
+									* MapData.TILE_HEIGHT + 1,
 									MapData.TILE_WIDTH, MapData.TILE_HEIGHT);
-							g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0F));
-						} else if( mapDisplay.highlightedTiles != null && mapDisplay.highlightedTiles.contains( dtile ) ) {
-	                    	g.setPaint( colorFromInt( mapDisplay.highlightedTiles.indexOf( dtile ) ) );
-							g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 0.6F));
-							g.fillRect(i * MapData.TILE_WIDTH + 1, j * MapData.TILE_HEIGHT + 1, MapData.TILE_WIDTH, MapData.TILE_HEIGHT);
-							g.setComposite(AlphaComposite.getInstance(AlphaComposite.SRC_OVER, 1.0F));
-	                    }
+							g.setComposite(AlphaComposite.getInstance(
+									AlphaComposite.SRC_OVER, 1.0F));
+						}
 					}
 				}
 			}
@@ -2177,14 +1866,17 @@ public class MapEditor extends ToolModule implements ActionListener,
 				else if (mode == 7)
 					tile = Math.min(tile, 202);
 				repaint();
-				mapDisplay.repaint();
 				if (e.isShiftDown()) {
-					ebhack.Ebhack.main.showModule(
-                        TileEditor.class,
-                        new int[] {
-                                TileEditor.getDrawTilesetNumber(tilesetChooser.getSelectedIndex()),
-                                mapDisplay.getSelectedSectorPalNumber(),
-                                tile } );
+					ebhack.Ebhack.main
+							.showModule(
+									TileEditor.class,
+									new int[] {
+											TileEditor
+													.getDrawTilesetNumber(tilesetChooser
+															.getSelectedIndex()),
+											mapDisplay
+													.getSelectedSectorPalNumber(),
+											tile });
 				}
 			}
 		}
@@ -2201,7 +1893,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 		public void mouseExited(MouseEvent e) {
 		}
 	}
-    
+
 	public static class MapData {
 		public static final int WIDTH_IN_TILES = 32 * 8;
 		public static final int HEIGHT_IN_TILES = 80 * 4;
@@ -2517,6 +2209,36 @@ public class MapEditor extends ToolModule implements ActionListener,
 				d.style = style;
 				return d;
 			}
+
+			private static final Color[] doorColors = new Color[] {
+					new Color(83, 81, 84), // Switch
+					new Color(204, 37, 41), // Rope
+					new Color(62, 150, 81), // Ladder
+					new Color(57, 106, 177), // Door
+					new Color(146, 36, 40), // Escalator
+					new Color(107, 76, 154), // Stairway
+					new Color(218, 124, 48), // Object
+					new Color(148, 139, 61), // Person
+			};
+
+			public Color getColor() {
+				if (type.equals("door"))
+					return doorColors[3];
+				else if (type.equals("rope"))
+					return doorColors[1];
+				else if (type.equals("ladder"))
+					return doorColors[2];
+				else if (type.equals("escalator"))
+					return doorColors[4];
+				else if (type.equals("stairway"))
+					return doorColors[5];
+				else if (type.equals("object"))
+					return doorColors[6];
+				else if (type.equals("switch"))
+					return doorColors[0];
+				else
+					return doorColors[7];
+			}
 		}
 
 		private final String[] climbDirs = new String[] { "nw", "ne", "sw",
@@ -2558,7 +2280,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 							Door d = new Door((Integer) de.get("X"),
 									(Integer) de.get("Y"),
 									((String) de.get("Type")).toLowerCase());
-							if (d.type.equals("stairs")
+							if (d.type.equals("stairway")
 									|| d.type.equals("escalator")) {
 								d.climbDir = indexOf(climbDirs,
 										de.get("Direction"));
@@ -2833,6 +2555,14 @@ public class MapEditor extends ToolModule implements ActionListener,
 					sec.teleport = (String) (entry.getValue().get("Teleport"));
 					sec.townmap = (String) (entry.getValue().get("Town Map"));
 					sec.setting = (String) (entry.getValue().get("Setting"));
+					sec.townmapImage = (String) (entry.getValue()
+							.get("Town Map Image"));
+					sec.townmapArrow = (String) (entry.getValue()
+							.get("Town Map Arrow"));
+					sec.townmapX = (Integer) (entry.getValue()
+							.get("Town Map X"));
+					sec.townmapY = (Integer) (entry.getValue()
+							.get("Town Map Y"));
 				}
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
@@ -2853,6 +2583,10 @@ public class MapEditor extends ToolModule implements ActionListener,
 					entry.put("Teleport", s.teleport);
 					entry.put("Tileset", s.tileset);
 					entry.put("Town Map", s.townmap);
+					entry.put("Town Map Image", s.townmapImage);
+					entry.put("Town Map Arrow", s.townmapArrow);
+					entry.put("Town Map X", s.townmapX);
+					entry.put("Town Map Y", s.townmapY);
 					sectorsMap.put(i, entry);
 					++i;
 				}
@@ -2916,8 +2650,23 @@ public class MapEditor extends ToolModule implements ActionListener,
 		}
 
 		public static class Sector {
-			public int tileset = 0, palette = 0, music = 0, item;
-			public String townmap, setting, teleport;
+			public static final String[] TOWN_MAP_NAMES = new String[] {
+					"none", "onett", "twoson", "threed", "fourside", "scaraba",
+					"summers", "none 2" };
+			public static final String[] SETTING_NAMES = new String[] { "none",
+					"indoors", "exit mouse usable", "lost underworld sprites",
+					"magicant sprites", "robot sprites", "butterflies",
+					"indoors and butterflies" };
+			public static final String[] TOWN_MAP_IMAGES = new String[] {
+					"none", "onett", "twoson", "threed", "fourside", "scaraba",
+					"summers" };
+			public static final String[] TOWN_MAP_ARROWS = new String[] {
+					"none", "up", "down", "right", "left" };
+
+			public int tileset = 0, palette = 0, music = 0, item, townmapX,
+					townmapY;
+			public String townmap, setting, teleport, townmapImage,
+					townmapArrow;
 
 			public void reset() {
 				tileset = 0;
@@ -2927,6 +2676,10 @@ public class MapEditor extends ToolModule implements ActionListener,
 				townmap = "none";
 				setting = "none";
 				teleport = "disabled";
+				townmapX = 0;
+				townmapY = 0;
+				townmapImage = "none";
+				townmapArrow = "none";
 			}
 
 			public void copy(Sector other) {
@@ -2938,9 +2691,67 @@ public class MapEditor extends ToolModule implements ActionListener,
 					this.townmap = other.townmap;
 					this.setting = other.setting;
 					this.teleport = other.teleport;
+					this.townmapX = other.townmapX;
+					this.townmapY = other.townmapY;
+					this.townmapImage = other.townmapImage;
+					this.townmapArrow = other.townmapArrow;
 				} catch (Exception e) {
 
 				}
+			}
+
+			private static int indexOf(Object[] arr, Object target) {
+				int i = 0;
+				for (Object e : arr) {
+					if (e.equals(target))
+						return i;
+					++i;
+				}
+				return -1;
+			}
+
+			public int getTownMapNum() {
+				return indexOf(TOWN_MAP_NAMES, this.townmap);
+			}
+
+			public void setTownMapNum(int i) {
+				this.townmap = TOWN_MAP_NAMES[i];
+			}
+
+			public int getSettingNum() {
+				return indexOf(SETTING_NAMES, this.setting);
+			}
+
+			public void setSettingNum(int i) {
+				this.setting = SETTING_NAMES[i];
+			}
+
+			public boolean isTeleportEnabled() {
+				return this.teleport.equals("enabled");
+			}
+
+			public void setTeleportEnabled(boolean b) {
+				if (b) {
+					this.teleport = "enabled";
+				} else {
+					this.teleport = "disabled";
+				}
+			}
+
+			public int getTownMapImageNum() {
+				return indexOf(TOWN_MAP_IMAGES, this.townmapImage);
+			}
+
+			public void setTownMapImageNum(int i) {
+				this.townmapImage = TOWN_MAP_IMAGES[i];
+			}
+
+			public int getTownMapArrowNum() {
+				return indexOf(TOWN_MAP_ARROWS, this.townmapArrow);
+			}
+
+			public void setTownMapArrowNum(int i) {
+				this.townmapArrow = TOWN_MAP_ARROWS[i];
 			}
 		}
 
@@ -3070,6 +2881,58 @@ public class MapEditor extends ToolModule implements ActionListener,
 		}
 	}
 
+	private void updateSectorAttrs() {
+		MapData.Sector sect = mapDisplay.getSelectedSector();
+
+		if (musicChooser.getSelectedIndex() != sect.music) {
+			musicChooser.removeActionListener(this);
+			musicChooser.setSelectedIndex(sect.music);
+			musicChooser.addActionListener(this);
+		}
+
+		itemField.getDocument().removeDocumentListener(this);
+		itemField.setText(Integer.toString(sect.item));
+		itemField.getDocument().addDocumentListener(this);
+
+		if (townMapChooser.getSelectedIndex() != sect.getTownMapNum()) {
+			townMapChooser.removeActionListener(this);
+			townMapChooser.setSelectedIndex(sect.getTownMapNum());
+			townMapChooser.addActionListener(this);
+		}
+
+		if (settingChooser.getSelectedIndex() != sect.getSettingNum()) {
+			settingChooser.removeActionListener(this);
+			settingChooser.setSelectedIndex(sect.getSettingNum());
+			settingChooser.addActionListener(this);
+		}
+
+		if (teleportCheckbox.isSelected() != sect.isTeleportEnabled()) {
+			teleportCheckbox.removeActionListener(this);
+			teleportCheckbox.setSelected(sect.isTeleportEnabled());
+			teleportCheckbox.addActionListener(this);
+		}
+
+		if (townMapImageChooser.getSelectedIndex() != sect.getTownMapImageNum()) {
+			townMapImageChooser.removeActionListener(this);
+			townMapImageChooser.setSelectedIndex(sect.getTownMapImageNum());
+			townMapImageChooser.addActionListener(this);
+		}
+
+		townMapXField.getDocument().removeDocumentListener(this);
+		townMapXField.setText(Integer.toString(sect.townmapX));
+		townMapXField.getDocument().addDocumentListener(this);
+
+		townMapYField.getDocument().removeDocumentListener(this);
+		townMapYField.setText(Integer.toString(sect.townmapY));
+		townMapYField.getDocument().addDocumentListener(this);
+
+		if (townMapArrowChooser.getSelectedIndex() != sect.getTownMapArrowNum()) {
+			townMapArrowChooser.removeActionListener(this);
+			townMapArrowChooser.setSelectedIndex(sect.getTownMapArrowNum());
+			townMapArrowChooser.addActionListener(this);
+		}
+	}
+
 	public void actionPerformed(ActionEvent e) {
 		if (e.getActionCommand().equals("sectorChanged")) {
 			MapData.Sector sect = mapDisplay.getSelectedSector();
@@ -3077,11 +2940,27 @@ public class MapEditor extends ToolModule implements ActionListener,
 				tilesetChooser.setEnabled(false);
 				palChooser.setEnabled(false);
 				musicChooser.setEnabled(false);
+				itemField.setEnabled(false);
+				townMapChooser.setEnabled(false);
+				settingChooser.setEnabled(false);
+				teleportCheckbox.setEnabled(false);
+				townMapImageChooser.setEnabled(false);
+				townMapXField.setEnabled(false);
+				townMapYField.setEnabled(false);
+				townMapArrowChooser.setEnabled(false);
 			} else {
 				if (!tilesetChooser.isEnabled()) {
 					tilesetChooser.setEnabled(true);
 					palChooser.setEnabled(true);
 					musicChooser.setEnabled(true);
+					itemField.setEnabled(true);
+					townMapChooser.setEnabled(true);
+					settingChooser.setEnabled(true);
+					teleportCheckbox.setEnabled(true);
+					townMapImageChooser.setEnabled(true);
+					townMapXField.setEnabled(true);
+					townMapYField.setEnabled(true);
+					townMapArrowChooser.setEnabled(true);
 				}
 				if (tilesetChooser.getSelectedIndex() != sect.tileset) {
 					updatePaletteChooser(sect.tileset, sect.palette);
@@ -3099,6 +2978,52 @@ public class MapEditor extends ToolModule implements ActionListener,
 					musicChooser.removeActionListener(this);
 					musicChooser.setSelectedIndex(sect.music);
 					musicChooser.addActionListener(this);
+				}
+
+				itemField.getDocument().removeDocumentListener(this);
+				itemField.setText(Integer.toString(sect.item));
+				itemField.getDocument().addDocumentListener(this);
+
+				if (townMapChooser.getSelectedIndex() != sect.getTownMapNum()) {
+					townMapChooser.removeActionListener(this);
+					townMapChooser.setSelectedIndex(sect.getTownMapNum());
+					townMapChooser.addActionListener(this);
+				}
+
+				if (settingChooser.getSelectedIndex() != sect.getSettingNum()) {
+					settingChooser.removeActionListener(this);
+					settingChooser.setSelectedIndex(sect.getSettingNum());
+					settingChooser.addActionListener(this);
+				}
+
+				if (teleportCheckbox.isSelected() != sect.isTeleportEnabled()) {
+					teleportCheckbox.removeActionListener(this);
+					teleportCheckbox.setSelected(sect.isTeleportEnabled());
+					teleportCheckbox.addActionListener(this);
+				}
+
+				if (townMapImageChooser.getSelectedIndex() != sect
+						.getTownMapImageNum()) {
+					townMapImageChooser.removeActionListener(this);
+					townMapImageChooser.setSelectedIndex(sect
+							.getTownMapImageNum());
+					townMapImageChooser.addActionListener(this);
+				}
+
+				townMapXField.getDocument().removeDocumentListener(this);
+				townMapXField.setText(Integer.toString(sect.townmapX));
+				townMapXField.getDocument().addDocumentListener(this);
+
+				townMapYField.getDocument().removeDocumentListener(this);
+				townMapYField.setText(Integer.toString(sect.townmapY));
+				townMapYField.getDocument().addDocumentListener(this);
+
+				if (townMapArrowChooser.getSelectedIndex() != sect
+						.getTownMapArrowNum()) {
+					townMapArrowChooser.removeActionListener(this);
+					townMapArrowChooser.setSelectedIndex(sect
+							.getTownMapArrowNum());
+					townMapArrowChooser.addActionListener(this);
 				}
 
 				if (tileSelector != null)
@@ -3119,6 +3044,21 @@ public class MapEditor extends ToolModule implements ActionListener,
 		} else if (e.getSource().equals(musicChooser)) {
 			mapDisplay.getSelectedSector().music = musicChooser
 					.getSelectedIndex();
+		} else if (e.getSource().equals(townMapChooser)) {
+			mapDisplay.getSelectedSector().setTownMapNum(
+					townMapChooser.getSelectedIndex());
+		} else if (e.getSource().equals(settingChooser)) {
+			mapDisplay.getSelectedSector().setSettingNum(
+					settingChooser.getSelectedIndex());
+		} else if (e.getSource().equals(teleportCheckbox)) {
+			mapDisplay.getSelectedSector().setTeleportEnabled(
+					teleportCheckbox.isSelected());
+		} else if (e.getSource().equals(townMapImageChooser)) {
+			mapDisplay.getSelectedSector().setTownMapImageNum(
+					townMapImageChooser.getSelectedIndex());
+		} else if (e.getSource().equals(townMapArrowChooser)) {
+			mapDisplay.getSelectedSector().setTownMapArrowNum(
+					townMapArrowChooser.getSelectedIndex());
 		} else if (e.getActionCommand().equals("apply")) {
 			// TODO
 		} else if (e.getActionCommand().equals("close")) {
@@ -3217,17 +3157,21 @@ public class MapEditor extends ToolModule implements ActionListener,
 		} else if (e.getActionCommand().equals("tileNums")) {
 			mapDisplay.toggleTileNums();
 			mapDisplay.repaint();
-		} else if (e.getActionCommand().equals("enableTileDragging")) {
-			mapDisplay.toggleTileDragging();
-			mapDisplay.repaint();
-		} else if (e.getActionCommand().equals("toggleHighlighting")) {
-			mapDisplay.toggleHighlighting();
-			mapDisplay.repaint();
 		} else if (e.getActionCommand().equals("npcNums")) {
 			mapDisplay.toggleSpriteNums();
 			mapDisplay.repaint();
 		} else if (e.getActionCommand().equals("mapchanges")) {
 			mapDisplay.toggleMapChanges();
+		} else if (e.getActionCommand().equals("showCoords")) {
+			coordsPanel.setVisible(prefs.getValueAsBoolean("showCoords"));
+			mainWindow.pack();
+		} else if (e.getActionCommand().equals("showSectorAttrs")) {
+			sectorPanel.setVisible(prefs.getValueAsBoolean("showSectorAttrs"));
+			mainWindow.pack();
+		} else if (e.getActionCommand().equals("showSectorAttrs2")) {
+			sectorPanel2
+					.setVisible(prefs.getValueAsBoolean("showSectorAttrs2"));
+			mainWindow.pack();
 		} else if (e.getActionCommand().equals("sectorEdit")) {
 			// net.starmen.pkhack.JHack.main.showModule(
 			// MapSectorPropertiesEditor.class, gfxcontrol
@@ -3274,12 +3218,44 @@ public class MapEditor extends ToolModule implements ActionListener,
 					copiedSectorTiles[i][j] = map.getMapTile(j + sectorX * 8, i
 							+ sectorY * 4);
 			copiedSector = map.getSector(sectorX, sectorY);
+
+			updateSectorAttrs();
 		} else if (e.getActionCommand().equals("pasteSector")) {
 			int sectorX = mapDisplay.getSectorX();
 			int sectorY = mapDisplay.getSectorY();
 			mapDisplay.pasteSector(copiedSector, sectorX, sectorY,
 					copiedSectorTiles);
 			mapDisplay.repaint();
+
+			// Refresh the tileset/palette fields if they changed
+			if (tilesetChooser.getSelectedIndex() != copiedSector.tileset) {
+				updatePaletteChooser(copiedSector.tileset, copiedSector.palette);
+				tilesetChooser.removeActionListener(this);
+				tilesetChooser.setSelectedIndex(copiedSector.tileset);
+				tilesetChooser.addActionListener(this);
+			} else if (palChooser.getSelectedIndex() != copiedSector.palette) {
+				updatePaletteChooser(copiedSector.tileset, copiedSector.palette);
+				palChooser.removeActionListener(this);
+				palChooser.setSelectedIndex(copiedSector.palette);
+				palChooser.addActionListener(this);
+			}
+
+			updateSectorAttrs();
+		} else if (e.getActionCommand().equals("copySector2")) {
+			pasteSector.setEnabled(true);
+
+			int sectorX = mapDisplay.getSectorX();
+			int sectorY = mapDisplay.getSectorY();
+			copiedSector2 = map.getSector(sectorX, sectorY);
+
+			updateSectorAttrs();
+		} else if (e.getActionCommand().equals("pasteSector2")) {
+			mapDisplay.getSelectedSector().copy(copiedSector2);
+
+			mapDisplay.repaint();
+
+			updateSectorAttrs();
+
 			// gfxcontrol.updateComponents();
 			/*
 			 * } else if (ac.equals(ENEMY_SPRITES)) {
@@ -3299,13 +3275,93 @@ public class MapEditor extends ToolModule implements ActionListener,
 						"There are no actions to redo.", "Error",
 						JOptionPane.ERROR_MESSAGE);
 			}
-		} else if( e.getActionCommand().equals( "highlightMultipleTilesExternal" ) ) {
-			mapDisplay.externalCommand( "highlightMultipleTiles" );
-		} else if( e.getActionCommand().equals( "selectAreaExternal" ) ) {
-			mapDisplay.externalCommand( "selectArea" );
-		} else if( e.getActionCommand().equals( "selectSnakeyAreaExternal" ) ) {
-			mapDisplay.externalCommand( "selectSnakeyArea" );
-		}
+		} else if (e.getActionCommand().equals("exportAsImage")) {
+            final JTextField inputX = ToolModule.createSizedJTextField(
+                    Integer.toString(MapData.WIDTH_IN_TILES).length(), true);
+            final JTextField inputX2 = ToolModule.createSizedJTextField(
+                    Integer.toString(MapData.WIDTH_IN_TILES).length(), true);
+            final JTextField inputY = ToolModule.createSizedJTextField(
+                    Integer.toString(MapData.HEIGHT_IN_TILES).length(), true);
+            final JTextField inputY2 = ToolModule.createSizedJTextField(
+                    Integer.toString(MapData.HEIGHT_IN_TILES).length(), true);
+            final Object[] message = {
+                    "X1:", inputX,
+                    "Y1:", inputY,
+                    "X2:", inputX2,
+                    "Y2:", inputY2
+            };
+
+            int option = JOptionPane.showConfirmDialog(null, message, "Login", JOptionPane.OK_CANCEL_OPTION);
+            if (option != JOptionPane.OK_OPTION) {
+                return;
+            }
+
+            final int imgX1 = Integer.parseInt(inputX.getText());
+            final int imgY1 = Integer.parseInt(inputY.getText());
+            final int imgX2 = Integer.parseInt(inputX2.getText());
+            final int imgY2 = Integer.parseInt(inputY2.getText());
+
+            final int imgX = Math.min(imgX1, imgX2);
+            final int imgY = Math.min(imgY1, imgY2);
+            final int imgW = Math.max(imgX1, imgX2) - imgX + 1;
+            final int imgH = Math.max(imgY1, imgY2) - imgY + 1;
+
+            final int oldScreenWidth = mapDisplay.getScreenWidth();
+            final int oldScreenHeight = mapDisplay.getScreenHeight();
+            final int oldX = mapDisplay.getMapX();
+            final int oldY = mapDisplay.getMapY();
+
+            mapDisplay.setScreenSize(imgW, imgH);
+            mapDisplay.setMapXY(imgX, imgY);
+
+            final BufferedImage bImg = new BufferedImage(imgW * MapData.TILE_WIDTH + 2,
+                    imgH * MapData.TILE_HEIGHT + 2, BufferedImage.TYPE_INT_RGB);
+            Graphics ig = bImg.createGraphics();
+            mapDisplay.paintComponent(ig);
+
+            mapDisplay.setScreenSize(oldScreenWidth, oldScreenHeight);
+            mapDisplay.setMapXY(oldX, oldY);
+
+            try
+            {
+                JFileChooser jfc = new JFileChooser();
+                jfc.setFileFilter(new FileFilter()
+                {
+                    public boolean accept(File f)
+                    {
+                        if ((f.getAbsolutePath().toLowerCase().endsWith(".png")
+                                || f.isDirectory())
+                                && f.exists())
+                        {
+                            return true;
+                        }
+                        return false;
+                    }
+
+                    public String getDescription()
+                    {
+                        return "*.png";
+                    }
+                });
+
+                if (jfc.showSaveDialog(null) == JFileChooser.APPROVE_OPTION) {
+                    File file = jfc.getSelectedFile();
+                    if (!file.getAbsolutePath().toLowerCase().endsWith((".png"))) {
+                        file = new File(jfc.getSelectedFile() + ".png");
+                    }
+                    BufferedImage croppedImage = bImg.getSubimage(1, 1,
+                            imgW * MapData.TILE_WIDTH, imgH * MapData.TILE_HEIGHT);
+                    ImageIO.write(croppedImage, "png", file);
+
+                    JOptionPane.showMessageDialog(mainWindow, "Image has been saved.", "Image Saved",
+                            JOptionPane.INFORMATION_MESSAGE);
+                }
+            }
+            catch (Exception ex)
+            {
+                ex.printStackTrace();
+            }
+        }
 	}
 
 	public void changedUpdate(DocumentEvent e) {
@@ -3331,6 +3387,18 @@ public class MapEditor extends ToolModule implements ActionListener,
 				updateXYScrollBars();
 				mapDisplay.repaint();
 			}
+		} else if (e.getDocument().equals(itemField.getDocument())
+				&& (itemField.getText().length() > 0)) {
+			mapDisplay.getSelectedSector().item = Integer.parseInt(itemField
+					.getText());
+		} else if (e.getDocument().equals(townMapXField.getDocument())
+				&& (townMapXField.getText().length() > 0)) {
+			mapDisplay.getSelectedSector().townmapX = Integer
+					.parseInt(townMapXField.getText());
+		} else if (e.getDocument().equals(townMapYField.getDocument())
+				&& (townMapYField.getText().length() > 0)) {
+			mapDisplay.getSelectedSector().townmapY = Integer
+					.parseInt(townMapYField.getText());
 		}
 	}
 
@@ -3350,31 +3418,34 @@ public class MapEditor extends ToolModule implements ActionListener,
 		}
 	}
 
+	public void setMapXY(int x, int y) {
+		x = Math.min(x, MapData.WIDTH_IN_TILES - mapDisplay.getScreenWidth());
+		x = Math.max(x, 0);
+
+		y = Math.min(y, MapData.HEIGHT_IN_TILES - mapDisplay.getScreenHeight());
+		y = Math.max(y, 0);
+
+		mapDisplay.setMapXY(x, y);
+
+		updateXYScrollBars();
+		updateXYFields();
+		mapDisplay.repaint();
+
+		// These fields will be inaccurate, so just clear them until the mouse
+		// moves again
+		pixelCoordLabel.setText("Pixel X,Y: (-,-)");
+		warpCoordLabel.setText("Warp X,Y: (-,-)");
+		tileCoordLabel.setText("Tiledon X,Y: (-,-)");
+	}
+
 	public void mouseWheelMoved(MouseWheelEvent e) {
 		if (e.isControlDown()) { // Horizontal scrolling
-			int x = mapDisplay.getMapX() + (e.getWheelRotation() * 4);
-			x = Math.min(x,
-					MapData.WIDTH_IN_TILES - mapDisplay.getScreenWidth());
-			x = Math.max(x, 0);
-			if (x != mapDisplay.getMapX()) {
-				mapDisplay.setMapX(x);
-				updateXYScrollBars();
-				updateXYFields();
-				mapDisplay.repaint();
-			}
+			setMapXY(mapDisplay.getMapX() + (e.getWheelRotation() * 4),
+					mapDisplay.getMapY());
 		} else { // Vertical scrolling
-			int y = mapDisplay.getMapY() + (e.getWheelRotation() * 4);
-			y = Math.min(y,
-					MapData.HEIGHT_IN_TILES - mapDisplay.getScreenHeight());
-			y = Math.max(y, 0);
-			if (y != mapDisplay.getMapY()) {
-				mapDisplay.setMapY(y);
-				updateXYScrollBars();
-				updateXYFields();
-				mapDisplay.repaint();
-			}
+			setMapXY(mapDisplay.getMapX(),
+					mapDisplay.getMapY() + (e.getWheelRotation() * 4));
 		}
-
 	}
 
 	@Override
@@ -3403,23 +3474,5 @@ public class MapEditor extends ToolModule implements ActionListener,
 	public void componentShown(ComponentEvent arg0) {
 		// TODO Auto-generated method stub
 
-	}
-	
-	private static List<Color> colorsFromInts = null;
-	//returns colors for the highlighted tiles
-	public static Color colorFromInt( int index ) {
-		if( colorsFromInts == null ) {
-			colorsFromInts = new ArrayList<Color>();
-			colorsFromInts.add( Color.orange );
-			colorsFromInts.add( Color.yellow );
-			colorsFromInts.add( Color.green );
-			colorsFromInts.add( new Color( 0, 255, 180 ) );
-			colorsFromInts.add( Color.cyan );
-			colorsFromInts.add( Color.blue );
-			colorsFromInts.add( Color.magenta );
-			colorsFromInts.add( Color.pink );
-			colorsFromInts.add( Color.red );
-		}
-		return colorsFromInts.get( index % colorsFromInts.size() );
 	}
 }

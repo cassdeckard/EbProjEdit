@@ -16,7 +16,11 @@ public class Ebhack {
     public static MainGUI main;
     
 	public static void main(String[] args) {
-		main = new MainGUI();
-		main.init();
+        main = new MainGUI();
+        if (args.length >= 1) {
+            main.init(args[0]);
+        } else {
+            main.init();
+        }
 	}
 }

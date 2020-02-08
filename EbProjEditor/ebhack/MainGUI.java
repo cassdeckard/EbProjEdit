@@ -1,38 +1,15 @@
 package ebhack;
 
-import java.awt.BorderLayout;
-import java.awt.Dimension;
-import java.awt.Image;
-import java.awt.Toolkit;
+import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
-import java.io.BufferedInputStream;
-import java.io.BufferedReader;
-import java.io.DataInputStream;
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.util.ArrayList;
 import java.util.ListIterator;
 import java.util.StringTokenizer;
-
-import javax.swing.Box;
-import javax.swing.BoxLayout;
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JFrame;
-import javax.swing.JLabel;
-import javax.swing.JMenu;
-import javax.swing.JMenuBar;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JScrollPane;
-import javax.swing.JSeparator;
-import javax.swing.JToolBar;
-import javax.swing.SwingWorker;
 
 public class MainGUI implements ActionListener, WindowListener {
 	private JFrame mainWindow;
@@ -52,11 +29,11 @@ public class MainGUI implements ActionListener, WindowListener {
 	}
 
 	public static String getVersion() {
-		return "v. \"secret9\"";
+		return "2.0";
 	}
 
 	public static String getCredits() {
-		return "Written by MrTenda\n" + "Based on JHack, by AnyoneEB";
+		return "Written by MrTenda\n" + "Based on JHack, by AnyoneEB\n" + "Licensed under GPLv3";
 	}
 
 	public JFrame getMainWindow() {
@@ -67,14 +44,22 @@ public class MainGUI implements ActionListener, WindowListener {
 
 	}
 
-	public void init() {
-		loadPrefs();
+	public void init(String projectFileName) {
+        loadPrefs();
 		initModules();
 		initGUI();
 
-		if (prefs.getValueAsBoolean("autoLoad"))
-			loadLastProject();
+        if (projectFileName != null)
+            launchLoadProject(projectFileName);
 	}
+
+    public void init() {
+        loadPrefs();
+        if (prefs.getValueAsBoolean("autoLoad"))
+            init(prefs.getValue("lastProject"));
+        else
+            init(null);
+    }
 
 	private void loadPrefs() {
 		project = new Project();
@@ -88,24 +73,21 @@ public class MainGUI implements ActionListener, WindowListener {
 		return prefs;
 	}
 
-	private void loadLastProject() {
-		final String lastProj = prefs.getValue("lastProject");
-		if (lastProj != null) {
-			SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
-				public Void doInBackground() {
-					if (!enterBusy() || (project.isLoaded() && !closeProject()))
-						return null;
+	private void launchLoadProject(final String projectFileName) {
+        SwingWorker<Void, Void> worker = new SwingWorker<Void, Void>() {
+            public Void doInBackground() {
+                if (!enterBusy() || (project.isLoaded() && !closeProject()))
+                    return null;
 
-					loadProject(new File(lastProj));
-					return null;
-				}
+                loadProject(new File(projectFileName));
+                return null;
+            }
 
-				public void done() {
-					exitBusy();
-				}
-			};
-			worker.execute();
-		}
+            public void done() {
+                exitBusy();
+            }
+        };
+        worker.execute();
 	}
 
 	private void initGUI() {
