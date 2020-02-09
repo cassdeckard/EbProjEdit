@@ -26,7 +26,7 @@ public class ProjectEditor extends ToolModule implements ActionListener {
 	}
 
 	public String getCredits() {
-		return "Written by MrTenda";
+		return "Written by ghost";
 	}
 	
 	public boolean showsInMenu() {

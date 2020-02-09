@@ -26,7 +26,7 @@ public class SpriteLoader extends ToolModule {
 	}
 
 	public String getCredits() {
-		return "Written by Mr. Tenda";
+		return "Written by ghost";
 	}
 
 	public void init() {

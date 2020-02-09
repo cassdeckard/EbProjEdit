@@ -32,7 +32,7 @@ public class DoorEditor extends ToolModule implements ActionListener,
 	}
 
 	public String getCredits() {
-		return "Written by Mr. Tenda";
+		return "Written by ghost";
 	}
 
 	private int indexOf(Object[] arr, Object target) {

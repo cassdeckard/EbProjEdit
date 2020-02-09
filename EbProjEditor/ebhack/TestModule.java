@@ -15,7 +15,7 @@ public class TestModule extends ToolModule {
 	}
 	
 	public String getCredits() {
-		return "Written by MrTenda";
+		return "Written by ghost";
 	}
 
 	@Override

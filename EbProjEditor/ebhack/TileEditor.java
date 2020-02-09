@@ -100,7 +100,7 @@ public class TileEditor extends ToolModule implements ActionListener{
 	
     public String getCredits()
     {
-        return "Written by AnyoneEB for JHack\n" + "Based on code by Goplat\n" + "Ported/adapted by MrTenda";
+        return "Written by AnyoneEB for JHack\n" + "Based on code by Goplat\n" + "Ported/adapted by ghost";
     }
 	
     private class ArrangementSelector extends AbstractButton implements MouseListener, MouseMotionListener, AdjustmentListener {

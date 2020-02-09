@@ -33,7 +33,7 @@ public class MainGUI implements ActionListener, WindowListener {
 	}
 
 	public static String getCredits() {
-		return "Written by MrTenda\n" + "Based on JHack, by AnyoneEB\n" + "Licensed under GPLv3";
+		return "Written by ghost\n" + "Based on JHack, by AnyoneEB\n" + "Licensed under GPLv3";
 	}
 
 	public JFrame getMainWindow() {

@@ -54,7 +54,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 	}
 
 	public String getCredits() {
-		return "Written by MrTenda";
+		return "Written by ghost";
 	}
 
 	public void init() {
