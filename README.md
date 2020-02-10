@@ -7,7 +7,7 @@ EB Project Editor is a graphical Java application used to edit projects created 
 
 ## Installation
 
-1. Download and install [Java](https://java.com/en/download/) if you don't have it already.
+1. Make sure you have a recent version of Java installed. We recommend you grab a build of OpenJDK 11 or newer from [AdoptOpenJDK](https://adoptopenjdk.net/?variant=openjdk11&jvmVariant=hotspot) if you don't.
 2. Get CoilSnake from the [official website](https://pk-hack.github.io/CoilSnake/). Once you have it, EB Project Editor can be opened by starting CoilSnake and selecting "EB Project Editor" under the "Tools" menu.
 3. If that version of EB Project Editor doesn't work for you, download and run [EbProjEdit.jar](https://github.com/brentjs0/EbProjEdit/raw/master/EbProjEdit.jar) from this repository.
 

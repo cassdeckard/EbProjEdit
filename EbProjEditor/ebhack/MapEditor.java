@@ -2101,7 +2101,7 @@ public class MapEditor extends ToolModule implements ActionListener,
 
 			try {
 				FileInputStream in = new FileInputStream(f);
-				setMapTilesFromStream(in);
+				setMapTilesFromString(f);
 			} catch (FileNotFoundException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -2604,16 +2604,18 @@ public class MapEditor extends ToolModule implements ActionListener,
 			}
 		}
 
-		private void setMapTilesFromStream(InputStream in) {
-			String tmp;
+		private void setMapTilesFromString(String fileContents) {
+			String line;
 			try {
-				for (int i = 0; i < mapTiles.length; i++) {
-					for (int j = 0; j < mapTiles[i].length; j++) {
-						tmp = "" + ((char) in.read());
-						tmp += (char) in.read();
-						tmp += (char) in.read();
+				for (int i = 0; i < MapData.WIDTH_IN_TILES; ++i) {
+					line = inputStream.read(
+					for (int j = 0; j < mapTiles[i].length; ++j) {
+						tmp = "" + ((char) inputStream.read());
+						tmp += (char) inputStream.read();
+						tmp += (char) inputStream.read();
 						mapTiles[i][j] = Integer.parseInt(tmp, 16);
-						in.read(); // " " or "\n"
+						while 
+						inputStream.read(); // " " or "\n"
 					}
 				}
 			} catch (Exception e) {
