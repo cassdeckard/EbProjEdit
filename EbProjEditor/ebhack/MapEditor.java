@@ -15,6 +15,8 @@ import java.awt.event.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.image.BufferedImage;
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 
@@ -1948,8 +1950,8 @@ public class MapEditor extends ToolModule implements ActionListener,
 		}
 
 		public void load(Project proj) {
-			importMapTiles(new File(proj.getFilename("eb.MapModule",
-					"map_tiles")));
+			importMapTiles(proj.getFilename("eb.MapModule",
+					"map_tiles"));
 			importSectors(new File(proj.getFilename("eb.MapModule",
 					"map_sectors")));
 			importSpritePlacements(new File(proj.getFilename(
@@ -2095,14 +2097,14 @@ public class MapEditor extends ToolModule implements ActionListener,
 			return spriteGroups[sprite][direction];
 		}
 
-		private void importMapTiles(File f) {
-			if (f == null)
+		private void importMapTiles(String mapTilesFileName) {
+			if (mapTilesFileName == null) {
 				return;
-
+			}
 			try {
-				FileInputStream in = new FileInputStream(f);
-				setMapTilesFromStream(in);
-			} catch (FileNotFoundException e) {
+				String mapTilesFileContents = Files.readString(Path.of(mapTilesFileName));
+				setMapTilesFromString(mapTilesFileContents);
+			} catch (IOException e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
 			}
@@ -2604,20 +2606,15 @@ public class MapEditor extends ToolModule implements ActionListener,
 			}
 		}
 
-		private void setMapTilesFromStream(InputStream in) {
-			String tmp;
-			try {
-				for (int i = 0; i < mapTiles.length; i++) {
-					for (int j = 0; j < mapTiles[i].length; j++) {
-						tmp = "" + ((char) in.read());
-						tmp += (char) in.read();
-						tmp += (char) in.read();
-						mapTiles[i][j] = Integer.parseInt(tmp, 16);
-						in.read(); // " " or "\n"
-					}
+		private void setMapTilesFromString(String mapTilesFileContents) {
+			String[] lines = mapTilesFileContents.split("\r\n|\n|\r");
+			for (int lineNumber = 0; lineNumber < lines.length; ++lineNumber) {
+				String line = lines[lineNumber];
+				String[] hexStrings = line.split(" ");
+				for (int hexStringNumber = 0; hexStringNumber < hexStrings.length; ++hexStringNumber) {
+					String hexString = hexStrings[hexStringNumber];
+					mapTiles[lineNumber][hexStringNumber] = Integer.parseInt(hexString, 16);
 				}
-			} catch (Exception e) {
-				e.printStackTrace();
 			}
 		}
 
