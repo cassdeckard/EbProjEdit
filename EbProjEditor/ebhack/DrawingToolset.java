@@ -35,6 +35,8 @@ import ebhack.DrawingArea.Toolset;
  */
 public class DrawingToolset extends JComponent implements Toolset
 {
+    private static final long serialVersionUID = -2196085554343826444L;
+    
     private ActionListener al;
     private ButtonGroup bg;
     private JComboBox fillSelector, fillMethodSelector;

@@ -420,7 +420,10 @@ public class MapEditor extends ToolModule implements ActionListener,
 	}
 
 	public static class MapDisplay extends AbstractButton implements
-			ActionListener, MouseListener, MouseMotionListener {
+			ActionListener, MouseListener, MouseMotionListener 
+	{
+		private static final long serialVersionUID = -4740051737789184222L;
+
 		private YMLPreferences prefs;
 		private MapData map;
 		private JMenuItem copySector, pasteSector, copySector2, pasteSector2,
@@ -1676,7 +1679,10 @@ public class MapEditor extends ToolModule implements ActionListener,
 	}
 
 	private class TileSelector extends AbstractButton implements MouseListener,
-			AdjustmentListener {
+			AdjustmentListener
+	{
+		private static final long serialVersionUID = 7754616866160380830L;
+
 		private int width, height;
 		private int tile = 0, mode = 0;
 		private JScrollBar scroll;

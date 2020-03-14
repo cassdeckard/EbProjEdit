@@ -22,6 +22,8 @@ import javax.swing.AbstractButton;
 public abstract class TileSelector extends AbstractButton implements
     MouseListener, MouseMotionListener
 {
+    private static final long serialVersionUID = -1937381097795593292L;
+    
     /**
      * Used internally to store the number of the currently selected tile.
      */

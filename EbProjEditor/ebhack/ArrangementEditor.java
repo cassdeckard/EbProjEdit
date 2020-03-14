@@ -26,6 +26,8 @@ import javax.swing.AbstractButton;
 public abstract class ArrangementEditor extends AbstractButton implements
     MouseListener, MouseMotionListener, Undoable, CopyAndPaster
 {
+    private static final long serialVersionUID = -3917348770399519279L;
+
     /**
      * Returns the currently selected tile. This is the tile that will be placed
      * when the user does a simple (no modifier keys) left click. Which tile is

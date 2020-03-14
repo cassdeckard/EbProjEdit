@@ -19,6 +19,8 @@ import java.util.ArrayList;
  */
 public class ImageDrawingArea extends DrawingArea
 {
+    private static final long serialVersionUID = -1608420428526195337L;
+    
     private BufferedImage img = null, selectImg; // img being edited
     /** {@link ColorPalette}used by this. */
     protected ColorPalette pal;

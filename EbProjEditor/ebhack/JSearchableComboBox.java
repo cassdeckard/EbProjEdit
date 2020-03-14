@@ -25,6 +25,8 @@ import javax.swing.JTextField;
 public class JSearchableComboBox extends JComponent implements ActionListener,
     KeyListener
 {
+    private static final long serialVersionUID = -3110810005638017397L;
+
     /** Make combo box not searchable. */
     public static final int SEARCH_NONE = 0;
     /** Show a search text field to the left of the combo box. */

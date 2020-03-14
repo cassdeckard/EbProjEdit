@@ -23,6 +23,8 @@ import java.util.ArrayList;
  */
 public class IntArrDrawingArea extends ImageDrawingArea
 {
+    private static final long serialVersionUID = -4211399201549888630L;
+
     private int[][] img = null, selectImg;
     private IntArrClipboard cb;
     private ArrayList undoArr = new ArrayList();

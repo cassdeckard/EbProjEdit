@@ -18,6 +18,8 @@ import javax.swing.KeyStroke;
  */
 public class PrefsCheckBox extends JCheckBoxMenuItem
 {
+    private static final long serialVersionUID = 2275347618405097752L;
+    
     private YMLPreferences prefs;
     private String pref;
     private boolean defVal;

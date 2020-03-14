@@ -605,7 +605,10 @@ public abstract class ToolModule {
 	}
 
 	protected static abstract class SimpleComboBoxModel extends
-			DefaultComboBoxModel implements ListDataListener {
+			DefaultComboBoxModel implements ListDataListener
+	{
+		private static final long serialVersionUID = 2294936090145308743L;
+		
 		protected ArrayList listDataListeners = new ArrayList();
 		protected Object selectedItem = null;
 		/** Offset of this list from the array it represents. */
@@ -748,7 +751,10 @@ public abstract class ToolModule {
 		return getNumberOfString(in, getUseHexNumbers());
 	}
 
-	protected static class NumberedComboBoxModel extends SimpleComboBoxModel {
+	protected static class NumberedComboBoxModel extends SimpleComboBoxModel 
+	{
+		private static final long serialVersionUID = 4115658249023744754L;
+
 		private Object obj[];
 
 		public NumberedComboBoxModel(Object[] in) {
@@ -1141,7 +1147,8 @@ public abstract class ToolModule {
 	 * @see #createComboBoxModel(Object[], String)
 	 */
 	public static SimpleComboBoxModel createComboBoxModel(final Object[] array,
-			final boolean zeroBased, final String zeroString) {
+			final boolean zeroBased, final String zeroString)
+	{
 		SimpleComboBoxModel out = new SimpleComboBoxModel() {
 			boolean zb = zeroBased;
 

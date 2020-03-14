@@ -17,6 +17,8 @@ import javax.swing.text.SimpleAttributeSet;
  */
 public class NumericMaxLengthDocument extends MaxLengthDocument
 {
+    private static final long serialVersionUID = 4738473053232857334L;
+
     private Pattern p;
 
     /**

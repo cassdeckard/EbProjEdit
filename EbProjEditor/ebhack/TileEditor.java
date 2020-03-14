@@ -103,7 +103,10 @@ public class TileEditor extends ToolModule implements ActionListener{
         return "Written by AnyoneEB for JHack\n" + "Based on code by Goplat\n" + "Ported/adapted by ghost";
     }
 	
-    private class ArrangementSelector extends AbstractButton implements MouseListener, MouseMotionListener, AdjustmentListener {
+    private class ArrangementSelector extends AbstractButton implements MouseListener, MouseMotionListener, AdjustmentListener
+    {
+        private static final long serialVersionUID = -8165884517938482980L;
+        
         private int currentArrangement = 0;
 
         public int getCurrentArrangement()
@@ -322,7 +325,9 @@ public class TileEditor extends ToolModule implements ActionListener{
         }
     }
     
-    private class CollisionEditor extends AbstractButton implements Undoable, CopyAndPaster, FocusListener {
+    private class CollisionEditor extends AbstractButton implements Undoable, CopyAndPaster, FocusListener
+    {
+        private static final long serialVersionUID = 743045746431725077L;
 
         private JTextField[][] tf = new JTextField[4][4];
         private boolean reading = false;
@@ -476,6 +481,8 @@ public class TileEditor extends ToolModule implements ActionListener{
     
     private class TileArrangementEditor extends ArrangementEditor
     {
+        private static final long serialVersionUID = 7568751398144816563L;
+
         protected boolean isEditable()
         {
             return true;
@@ -567,6 +574,8 @@ public class TileEditor extends ToolModule implements ActionListener{
 	
     private class MinitileSelector extends TileSelector
     {
+        private static final long serialVersionUID = 6601371724866195397L;
+
         public int getTilesWide()
         {
             return 32;
@@ -609,7 +618,10 @@ public class TileEditor extends ToolModule implements ActionListener{
         }
     }
     
-    private class FocusIndicator extends AbstractButton implements FocusListener, MouseListener {
+    private class FocusIndicator extends AbstractButton implements FocusListener, MouseListener
+    {
+        private static final long serialVersionUID = 2763859730113118563L;
+        
         // 0 = other FI, 1 = left component, 2 = right component
         private int focus = 1;
         private Component c1, c2;

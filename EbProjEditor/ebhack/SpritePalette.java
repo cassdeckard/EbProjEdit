@@ -30,6 +30,8 @@ import ebhack.ImageDrawingArea.ColorPalette;
 public class SpritePalette extends AbstractButton implements ColorPalette,
     MouseListener, MouseMotionListener
 {
+    private static final long serialVersionUID = -6771384039185133728L;
+    
     private Color[] pal = null;
     private int selectedColor, squareSize, rows, cols;
     private String actionCommand;
