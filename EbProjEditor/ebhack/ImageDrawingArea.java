@@ -320,7 +320,7 @@ public class ImageDrawingArea extends DrawingArea
     /**
      * @see net.starmen.pkhack.DrawingArea#drawPoint(int, int)
      */
-    public void drawPoint(int x, int y)
+    public void drawPoint(int x, int y) throws InterruptedException
     {
         this.drawPoint(x, y, this.getGraphics());
     }
@@ -335,7 +335,7 @@ public class ImageDrawingArea extends DrawingArea
      * @param y Coordinate on the image.
      * @param g <code>Graphics</code> to draw to.
      */
-    public void drawPoint(int x, int y, Graphics g)
+    public void drawPoint(int x, int y, Graphics g) throws InterruptedException
     {
         g.setColor(getPointColor(x, y));
         g.fillRect((int) (x * zoom), (int) (y * zoom), (int) zoom, (int) zoom);
@@ -369,9 +369,9 @@ public class ImageDrawingArea extends DrawingArea
     }
 
     /**
-     * @see net.starmen.pkhack.DrawingArea#getPoint(int, int)
+     * @see net.starmen.pkhack.DrawingArea#getPointColorNumber(int, int)
      */
-    public int getPoint(int x, int y)
+    public int getPointColorNumber(int x, int y) throws InterruptedException
     {
         return pal.getIndexOf(getPointColor(x, y));
     }
@@ -384,22 +384,15 @@ public class ImageDrawingArea extends DrawingArea
      * @param y Coordinate on the image.
      * @return The Color of the specified point.
      */
-    public Color getPointColor(int x, int y)
+    public Color getPointColor(int x, int y) throws InterruptedException
     {
         // return new Color(((BufferedImage) img).getRGB(x, y));
 
         int w = 1, h = 1;
         int[] pixels = new int[w * h];
         PixelGrabber pg = new PixelGrabber(img, x, y, w, h, pixels, 0, w);
-        try
-        {
-            pg.grabPixels();
-        }
-        catch (InterruptedException e)
-        {
-            System.err.println("interrupted waiting for pixels!");
-            return null;
-        }
+        pg.grabPixels();
+
         int alpha, blue, red, green;
 
         alpha = (pixels[0] >> 24) & 0xff;
@@ -448,7 +441,13 @@ public class ImageDrawingArea extends DrawingArea
                 {
                     for (int y = 0; y < this.drawingHeight; y++)
                     {
-                        drawPoint(x, y, g);
+                        try {
+                            drawPoint(x, y, g);
+                        }
+                        catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                            return;
+                        }
                     }
                 }
             }
@@ -615,7 +614,7 @@ public class ImageDrawingArea extends DrawingArea
         fireChanged();
     }
 
-    private void doPaintBucketReg(int x, int y, Color newCol, Color currentCol)
+    private void doPaintBucketReg(int x, int y, Color newCol, Color currentCol) throws InterruptedException
     {
         // make sure it's on the image
         if (x > -1 && y > -1 && x < this.getDrawingWidth()
@@ -629,7 +628,7 @@ public class ImageDrawingArea extends DrawingArea
         }
     }
 
-    private void doPaintBucketNoDia(int x, int y, Color newCol, Color currentCol)
+    private void doPaintBucketNoDia(int x, int y, Color newCol, Color currentCol) throws InterruptedException
     {
         // make sure it's on the image
         if (x > -1 && y > -1 && x < this.getDrawingWidth()
@@ -650,7 +649,7 @@ public class ImageDrawingArea extends DrawingArea
      * @param x X-coordinate to start from.
      * @param y Y-coordinate to start from.
      */
-    protected void doPaintBucket(int x, int y)
+    protected void doPaintBucket(int x, int y) throws InterruptedException
     {
         Color currentCol = this.getPointColor(x, y), newCol = pal
             .getSelectedColor();
@@ -678,7 +677,7 @@ public class ImageDrawingArea extends DrawingArea
      * @param x2 X-coordinate of drag end.
      * @param y2 Y-coordinate of drag end.
      */
-    protected void doTool(int x1, int y1, int x2, int y2)
+    protected void doTool(int x1, int y1, int x2, int y2) throws InterruptedException
     {
         // x1, y1 is start of drag
         // x2, y2 is end/current place of drag
@@ -835,6 +834,7 @@ public class ImageDrawingArea extends DrawingArea
     /**
      * @see java.awt.event.MouseMotionListener#mouseDragged(MouseEvent)
      */
+    @Override
     public void mouseDragged(MouseEvent me)
     {
         if (this.isEnabled())
@@ -849,7 +849,13 @@ public class ImageDrawingArea extends DrawingArea
                 undo(false);
                 addUndo();
             }
-            doTool(sx, sy, getImgXY(me.getX()), getImgXY(me.getY()));
+            try {
+                doTool(sx, sy, getImgXY(me.getX()), getImgXY(me.getY()));
+            }
+            catch (InterruptedException e) {
+                handleInterruptedException(e);
+                return;
+            }
 
             getNewImage();
         }
@@ -858,6 +864,7 @@ public class ImageDrawingArea extends DrawingArea
     /**
      * @see java.awt.event.MouseListener#mousePressed(MouseEvent)
      */
+    @Override
     public void mousePressed(MouseEvent me)
     {
         if (this.isEnabled())
@@ -877,7 +884,13 @@ public class ImageDrawingArea extends DrawingArea
                 addUndo();
             }
 
-            doTool(sx, sy, sx, sy);
+            try {
+                doTool(sx, sy, sx, sy);
+            }
+            catch (InterruptedException e) {
+                handleInterruptedException(e);
+                return;
+            }
         }
     }
 
@@ -891,7 +904,13 @@ public class ImageDrawingArea extends DrawingArea
             if (tools.getSelectedDrawingTool() == Toolset.TOOL_PAINT_BUCKET)
             {
                 addUndo();
-                doPaintBucket(getImgXY(me.getX()), getImgXY(me.getY()));
+                try {
+                    doPaintBucket(getImgXY(me.getX()), getImgXY(me.getY()));
+                }
+                catch (InterruptedException e) {
+                    handleInterruptedException(e);
+                    return;
+                }
                 repaint();
                 fireChanged();
             }

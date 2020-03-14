@@ -133,7 +133,7 @@ public abstract class DrawingArea extends JComponent implements MouseListener,
      * @param x Coordinate
      * @param y Coordinate
      */
-    public abstract void drawPoint(int x, int y);
+    public abstract void drawPoint(int x, int y) throws InterruptedException;
 
     // set x, y on image to c and then call drawPoint x,y
     /**
@@ -154,7 +154,7 @@ public abstract class DrawingArea extends JComponent implements MouseListener,
      * @param y Coordinate
      * @return "color" at x, y
      */
-    public abstract int getPoint(int x, int y);
+    public abstract int getPointColorNumber(int x, int y) throws InterruptedException;
 
     /**
      * Returns the zoom.
@@ -298,5 +298,12 @@ public abstract class DrawingArea extends JComponent implements MouseListener,
     {
         this.addMouseListener(this);
         this.addMouseMotionListener(this);
+    }
+
+    protected static void handleInterruptedException(InterruptedException interruptedException)
+    {
+        System.err.println(interruptedException.getMessage());
+        System.err.println(interruptedException.getStackTrace());
+        Thread.currentThread().interrupt();
     }
 }

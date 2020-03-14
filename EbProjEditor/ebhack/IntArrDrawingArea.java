@@ -684,7 +684,14 @@ public class IntArrDrawingArea extends ImageDrawingArea
                     }
                     else
                     {
-                        drawPoint(x, y, g);
+                        try {
+                            drawPoint(x, y, g);
+                        }
+                        catch (InterruptedException e) {
+                            handleInterruptedException(e);
+                            return;
+                        }
+                        
                     }
                 }
             }
