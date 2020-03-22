@@ -1,6 +1,9 @@
 package ebhack;
 
+import ebhack.text.TextHelper;
+
 import javax.swing.*;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,7 +12,6 @@ import java.awt.event.WindowListener;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.ListIterator;
-import java.util.StringTokenizer;
 
 public class MainGUI implements ActionListener, WindowListener {
 	private JFrame mainWindow;
@@ -382,33 +384,6 @@ public class MainGUI implements ActionListener, WindowListener {
 				+ MainGUI.getCredits() + this.getModuleCredits();
 	}
 
-	private JScrollPane createScollingLabel(String text) {
-		int emptyLine = new JLabel("newline").getPreferredSize().height;
-		JPanel labels = new JPanel();
-		labels.setLayout(new BoxLayout(labels, BoxLayout.Y_AXIS));
-
-		text = text.replaceAll("\n\n", "\nnewline\n");
-
-		StringTokenizer st = new StringTokenizer(text, "\n");
-		JLabel temp;
-		while (st.hasMoreTokens()) {
-			temp = new JLabel(st.nextToken());
-			if (temp.getText().equals("newline")) {
-				labels.add(Box.createVerticalStrut(emptyLine));
-			} else {
-				labels.add(temp);
-			}
-		}
-
-		JScrollPane out = new JScrollPane(labels,
-				JScrollPane.VERTICAL_SCROLLBAR_ALWAYS,
-				JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
-
-		out.setPreferredSize(new Dimension(out.getPreferredSize().width, 200));
-
-		return out;
-	}
-
 	private boolean enterBusy() {
 		if (busy) {
 			JOptionPane
@@ -690,12 +665,9 @@ public class MainGUI implements ActionListener, WindowListener {
 		} else if (e.getActionCommand().equals("exit")) {
 			exit();
 		} else if (e.getActionCommand().equals("about")) {
-			JOptionPane.showMessageDialog(
-					null,
-					this.createScollingLabel(this.getFullCredits()),
-					"About " + MainGUI.getDescription() + " "
-							+ MainGUI.getVersion(),
-					JOptionPane.INFORMATION_MESSAGE);
+      String titleText = "About " + MainGUI.getDescription() + " " + MainGUI.getVersion();
+      String message = this.getFullCredits();
+      showDynamicMessageDialog(titleText, message);
 		} else if (e.getActionCommand().startsWith("module")) {
 			moduleList.get(Integer.parseInt(e.getActionCommand().substring(6)))
 					.show();
@@ -722,5 +694,54 @@ public class MainGUI implements ActionListener, WindowListener {
 	}
 
 	public void windowDeactivated(WindowEvent e) {
-	}
+  }
+  
+  /**
+   * Display a simple GUI message pop-up.
+   * @param titleText The title text for the pop-up window.
+   * @param message The text content of the pop-up window.
+   * @param jOptionPaneMessageType The type of JOptionPane message to be displayed: ERROR_MESSAGE,
+   * INFORMATION_MESSAGE, WARNING_MESSAGE, QUESTION_MESSAGE, or PLAIN_MESSAGE. Default is
+   * JOptionPane.INFORMATION_MESSAGE.
+   * @param lineWrapLength The character count at which to wrap lines in the displayed message.
+   * Default is 80.
+   */
+  public static void showDynamicMessageDialog(String titleText, StringBuilder message, int jOptionPaneMessageType,
+      int lineWrapLength) {
+    StringBuilder output = lineWrapLength > 0 ? TextHelper.wrapText(message, lineWrapLength)
+        : new StringBuilder(message);
+
+    JTextArea textArea = new JTextArea();
+    textArea.setEditable(false);
+    textArea.setText(output.toString());
+    textArea.setBorder(new EmptyBorder(5, 8, 8, 8));
+
+    int almostScreenHeight = Math.round(getScreenHeight() * .75f);
+
+    JScrollPane scrollPane = new JScrollPane(textArea);
+    if (TextHelper.getLineCount(output) * 16 > almostScreenHeight) {
+      int paneWidth = lineWrapLength > 0 ? lineWrapLength * 8 : 600;
+
+      scrollPane.setPreferredSize(new Dimension(paneWidth, almostScreenHeight));
+    }
+
+    JOptionPane.showMessageDialog(null, scrollPane, titleText, jOptionPaneMessageType);
+  }
+
+  /**
+   * Display a simple GUI message pop-up.
+   * @param titleText The title text for the pop-up window.
+   * @param message The text content of the pop-up window.
+   */
+  public static void showDynamicMessageDialog(String titleText, String message) {
+    showDynamicMessageDialog(titleText, new StringBuilder(message), JOptionPane.INFORMATION_MESSAGE, 80);
+  }
+
+  /**
+   * Return the height of the current display in pixels.
+   * @return The height of the current display in pixels.
+   */
+  private static int getScreenHeight() {
+    return GraphicsEnvironment.getLocalGraphicsEnvironment().getDefaultScreenDevice().getDisplayMode().getHeight();
+  }
 }
