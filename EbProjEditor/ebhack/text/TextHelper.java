@@ -5,11 +5,14 @@ package ebhack.text;
  */
 public final class TextHelper {
   /**
-   * In the text provided, replace spaces with newlines as necessary to prevent lines from
-   * exceeding the specified number of characters. Sequences without spaces are not wrapped.
-   * @param text The text to be wrapped
-   * @param preferredLineLength The greatest number of characters a line should have. Sequences
-   * without spaces might exceed this number.
+   * In the text provided, replace spaces with newlines as necessary to prevent
+   * lines from exceeding the specified number of characters. Sequences without
+   * spaces are not wrapped.
+   * 
+   * @param text                The text to be wrapped
+   * @param preferredLineLength The greatest number of characters a line should
+   *                            have. Sequences without spaces might exceed this
+   *                            number.
    * @return The text with newlines added as necessary.
    */
   public static StringBuilder wrapText(StringBuilder text, int preferredLineLength) {
@@ -41,6 +44,7 @@ public final class TextHelper {
 
   /**
    * Return the number of lines in the text provided.
+   * 
    * @param text The text for which to count lines.
    * @return The number of lines in the text provided.
    */
@@ -55,10 +59,13 @@ public final class TextHelper {
   }
 
   /**
-   * Return the number of occurrences of the specified character in the provided text.
-   * @param text The text for which to count occurrences.
+   * Return the number of occurrences of the specified character in the provided
+   * text.
+   * 
+   * @param text      The text for which to count occurrences.
    * @param character The character to count.
-   * @return The number of occurrences of the specified character in the provided text.
+   * @return The number of occurrences of the specified character in the provided
+   *         text.
    */
   public static int countCharacterOccurrences(StringBuilder text, char character) {
     int count = 0;
@@ -72,7 +79,8 @@ public final class TextHelper {
     return count;
   }
 
-  private static void wrapLine(StringBuilder text, int lineStartPosition, int lineEndPosition, int preferredLineLength) {
+  private static void wrapLine(StringBuilder text, int lineStartPosition, int lineEndPosition,
+      int preferredLineLength) {
     int previousWhitespaceCharacterPosition = lineStartPosition - 1;
     int spacePosition = 0;
     int newBreakPosition;
