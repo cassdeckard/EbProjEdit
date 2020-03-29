@@ -1,5 +1,7 @@
 package ebhack;
 
+import ebhack.error.Error;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -61,28 +63,23 @@ public class Project {
   }
 
   public boolean load() {
-    try {
-      JFileChooser jfc = new JFileChooser(Project.getDefaultDir());
-      jfc.setFileFilter(new FileFilter() {
-        public boolean accept(File f) {
-          if ((f.getAbsolutePath().toLowerCase().endsWith(".snake") || f.isDirectory()) && f.exists()) {
-            return true;
-          }
-          return false;
+    JFileChooser jfc = new JFileChooser(Project.getDefaultDir());
+    jfc.setFileFilter(new FileFilter() {
+      public boolean accept(File f) {
+        if ((f.getAbsolutePath().toLowerCase().endsWith(".snake") || f.isDirectory()) && f.exists()) {
+          return true;
         }
-
-        public String getDescription() {
-          return "CoilSnake Project (*.snake)";
-        }
-      });
-
-      if (jfc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
-        return load(jfc.getSelectedFile());
-      } else {
         return false;
       }
-    } catch (Exception e) {
-      e.printStackTrace();
+
+      public String getDescription() {
+        return "CoilSnake Project (*.snake)";
+      }
+    });
+
+    if (jfc.showOpenDialog(null) == JFileChooser.APPROVE_OPTION) {
+      return load(jfc.getSelectedFile());
+    } else {
       return false;
     }
   }
@@ -110,10 +107,11 @@ public class Project {
     try {
       input = new FileInputStream(f);
       Yaml yaml = new Yaml();
-      proj = (Map<String, Object>) yaml.load(input);
+      proj = yaml.<Map<String, Object>>load(input);
     } catch (FileNotFoundException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      Error.PROJECT_FILE_COULD_NOT_BE_FOUND.showMessage(e, f.toPath());
+    } catch (ClassCastException e) {
+      Error.PROJECT_FILE_WAS_MALFORMED.showMessage(e, f.toPath());
     }
 
     projFile = f;
@@ -135,8 +133,7 @@ public class Project {
       yaml.dump(proj, fw);
       return true;
     } catch (IOException e) {
-      // TODO Auto-generated catch block
-      e.printStackTrace();
+      Error.PROJECT_FILE_COULD_NOT_BE_OPENED.showMessage(e, projFile.toPath());
     }
     return false;
   }
@@ -145,8 +142,16 @@ public class Project {
     return path;
   }
 
-  public String getFilename(String mod, String fid) {
-    return path + File.separator + ((Map<String, Map<String, String>>) proj.get("resources")).get(mod).get(fid);
+  public String getFilename(String moduleKey, String fileKey) {
+    String resourceFileName = "";
+    try {
+      @SuppressWarnings("unchecked")
+      Map<String, Map<String, String>> resourcesNode = (Map<String, Map<String, String>>) proj.get("resources");
+      resourceFileName = path + File.separator + resourcesNode.get(moduleKey).get(fileKey);
+    } catch (ClassCastException e) {
+      Error.PREVIOUSLY_LOADED_PROJECT_FILE_WAS_MALFORMED.showMessageAndExit(e, projFile.toPath());
+    }
+    return resourceFileName;
   }
 
   public void close() {

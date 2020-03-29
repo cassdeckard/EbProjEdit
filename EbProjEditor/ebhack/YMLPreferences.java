@@ -14,6 +14,8 @@ import java.util.Map;
 import org.yaml.snakeyaml.Yaml;
 
 public class YMLPreferences {
+
+  public static final String filePath = Ebhack.EBHACK_DIR + File.separator + "EbhackPrefs.yml";
   private Map<String, String> prefs;
   private File f = null;
 
@@ -34,10 +36,13 @@ public class YMLPreferences {
       try {
         input = new FileInputStream(f);
         Yaml yaml = new Yaml();
-        prefs = yaml.<Map<String, String>>load(input);
+        @SuppressWarnings("unchecked")
+        Map<String, String> prefsYaml = (Map<String, String>) yaml.load(input);
+        prefs = prefsYaml;
       } catch (FileNotFoundException e) {
-        String filePath = Ebhack.EBHACK_DIR.toString() + File.separator + "EbhackPrefs.yml";
-        Error.PREFERENCES_FILE_COULD_NOT_BE_FOUND.showMessage(e, filePath);
+        Error.PREFERENCES_FILE_COULD_NOT_BE_FOUND.showMessage(e);
+      } catch (ClassCastException e) {
+        Error.PREFERENCES_FILE_WAS_MALFORMED.showMessage(e);
       }
     }
   }
@@ -179,8 +184,7 @@ public class YMLPreferences {
       yaml.dump(prefs, fw);
       return true;
     } catch (IOException e) {
-      String filePath = Ebhack.EBHACK_DIR.toString() + File.separator + "EbhackPrefs.yml";
-      Error.PREFERENCES_FILE_COULD_NOT_BE_OPENED.showMessage(e, filePath);
+      Error.PREFERENCES_FILE_COULD_NOT_BE_OPENED.showMessage(e);
     }
 
     return false;

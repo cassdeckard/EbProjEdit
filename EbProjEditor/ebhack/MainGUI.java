@@ -66,7 +66,7 @@ public class MainGUI implements ActionListener, WindowListener {
   private void loadPrefs() {
     project = new Project();
 
-    File ymlFile = new File(Ebhack.EBHACK_DIR.toString() + File.separator + "EbhackPrefs.yml");
+    File ymlFile = new File(YMLPreferences.filePath);
     this.prefs = new YMLPreferences(ymlFile);
   }
 
